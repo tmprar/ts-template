@@ -1,0 +1,8 @@
+{
+  "name": "@myapp/typescript-config",
+  "private": true,
+  "license": "UNLICENSED",
+  "files": [
+    "*.json"
+  ]
+}

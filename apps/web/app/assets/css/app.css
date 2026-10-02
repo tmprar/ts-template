@@ -1,0 +1,7 @@
+/*
+  Tailwind と Nuxt UI の読み込みだけを持つ。
+  配色・余白・角丸などのデザイントークンは、ここに @theme で足す
+  (https://ui.nuxt.com/docs/getting-started/theme/design-system)
+*/
+@import "tailwindcss";
+@import "@nuxt/ui";
