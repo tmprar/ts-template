@@ -1,5 +1,5 @@
 # PR で検査する。template/.github/workflows/ci.yml は作ったプロジェクト用で、このリポジトリでは動かない。
-# テンプレートは、CLI で実際にプロジェクトを作り、そのプロジェクトで検査する(書き換えた後の姿が正しいかを見るため)
+# テンプレートは、CLI で実際にプロジェクトを作り、そのプロジェクトで検査する
 name: ci
 
 on:
@@ -18,17 +18,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      # CLI は Node・pnpm のバージョンを固定しない(npx で利用者の環境のまま動かす)ので、テンプレートの指定に合わせる
+      # Node は package.json の engines.node の下限に合わせる
       - uses: pnpm/action-setup@v4
         with:
-          package_json_file: template/package.json
+          version: 12
       - uses: actions/setup-node@v4
         with:
-          node-version-file: template/package.json
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            template/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
@@ -40,13 +37,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      # CLI は Node・pnpm のバージョンを固定しない(npx で利用者の環境のまま動かす)ので、テンプレートの指定に合わせる
       - uses: pnpm/action-setup@v4
         with:
-          package_json_file: template/package.json
+          version: 12
       - uses: actions/setup-node@v4
         with:
-          node-version-file: template/package.json
+          node-version: 24
           cache: pnpm
           cache-dependency-path: |
             pnpm-lock.yaml
