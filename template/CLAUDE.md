@@ -32,7 +32,7 @@ pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 
 `--filter` で直接実行するとルート `.env` の注入も DB コンテナの起動も行われない。通常はルートのスクリプトを使う。
 
-## 前提(知らないと踏む)
+## 前提
 
 - 開発環境はルート駆動。環境変数はルート `.env` を `dotenv-cli` で注入し、パッケージ側から外を参照しない
 - API では `process.env` を直接読まない。`apps/api/src/platform/config/env.schema.ts` に追加し、`AppConfigService` 経由で参照する。例外は Nest より先に走る `src/instrument.ts`(Sentry)だけで、そこも同じスキーマで検証して読む
