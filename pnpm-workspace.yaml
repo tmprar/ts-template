@@ -1,17 +1,2 @@
-packages:
-  - apps/*
-  - packages/*
-
-allowBuilds:
-  '@scarf/scarf': false
-  # testcontainers経由の依存。ネイティブビルドなしでもJS実装で動くため不要
-  cpu-features: false
-  esbuild: true
-  lefthook: true
-  protobufjs: false
-  ssh2: false
-  unrs-resolver: false
-  # @nuxt/ui経由の依存。インストール済みVueのバージョンに合わせてエントリを切り替えるpostinstallのため必要
-  vue-demi: true
-
+# CLI(このディレクトリ)だけの設定。ひな形(template/)は自分の pnpm-workspace.yaml を持つ別のワークスペース
 savePrefix: '~'

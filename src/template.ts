@@ -1,4 +1,3 @@
-import { downloadTemplate } from 'giget'
 import { execFile } from 'node:child_process'
 import {
   cp,
@@ -11,6 +10,7 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import {
@@ -18,14 +18,27 @@ import {
   replaceProjectName,
   stripMarkedBlocks,
   toNameVariants,
-} from './text.js'
+} from './text.ts'
 
 const execFileAsync = promisify(execFile)
 
 /**
-このCLI自身の置き場。作ったプロジェクトには残さない
+このCLIのパッケージのルート(dist/ の1つ上)
 */
-const CLI_PACKAGE_PATH = 'packages/create-app'
+const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
+
+/**
+ひな形の置き場
+*/
+export const TEMPLATE_DIRECTORY = path.join(PACKAGE_ROOT, 'template')
+
+/**
+npm がパッケージに含めないドットファイル。`npx github:` で取得したときは欠けているので、
+ビルド時に書き出した内容(DOTFILES_PATH)から戻す
+*/
+const DOTFILES_DROPPED_BY_NPM = new Set(['.gitignore', '.npmrc'])
+
+export const DOTFILES_PATH = fileURLToPath(new URL('dotfiles.json', import.meta.url))
 
 /**
 インフラを含めないときに消すもの
@@ -61,13 +74,13 @@ export type TemplateOptions = {
 }
 
 /**
- * 取得したひな形を、指定のプロジェクトとして使える形に書き換える
+ * 写したひな形を、指定のプロジェクトとして使える形に書き換える
  */
 export async function applyTemplate(
   directory: string,
   options: TemplateOptions,
 ): Promise<void> {
-  const removedPaths = [CLI_PACKAGE_PATH, ...(options.infra ? [] : INFRA_PATHS)]
+  const removedPaths = options.infra ? [] : INFRA_PATHS
 
   for (const removedPath of removedPaths) {
     await rm(path.join(directory, removedPath), {
@@ -118,20 +131,47 @@ export async function applyTemplate(
 }
 
 /**
- * ひな形を取得する。`source` がローカルのディレクトリならそこから写し(ひな形の開発用)、
- * それ以外は giget の指定(`gh:owner/repo#ref` など)として取得する
+ * npm がパッケージに含めないドットファイルの中身を、ひな形の中のパスごとに集める(ビルド時に使う)
  */
-export async function fetchTemplate(
-  source: string,
-  directory: string,
-): Promise<void> {
-  if (await isDirectory(source)) {
-    await copyLocalTemplate(source, directory)
+export async function collectDotfiles(): Promise<Record<string, string>> {
+  const dotfiles: Record<string, string> = {}
+  const files = await listTemplateFiles()
 
+  for (const file of files) {
+    if (DOTFILES_DROPPED_BY_NPM.has(path.basename(file))) {
+      dotfiles[file] = await readFile(path.join(TEMPLATE_DIRECTORY, file), 'utf8')
+    }
+  }
+
+  return dotfiles
+}
+
+/**
+ * ひな形を写す
+ */
+export async function copyTemplate(directory: string): Promise<void> {
+  const files = await listTemplateFiles()
+
+  for (const file of files) {
+    const to = path.join(directory, file)
+
+    await mkdir(path.dirname(to), { recursive: true })
+    await cp(path.join(TEMPLATE_DIRECTORY, file), to)
+  }
+
+  if (await isGitCheckout()) {
     return
   }
 
-  await downloadTemplate(source, { dir: directory })
+  // npm から取得したパッケージには .gitignore などが入っていない
+  const dotfiles = JSON.parse(await readFile(DOTFILES_PATH, 'utf8')) as Record<string, string>
+
+  for (const [file, content] of Object.entries(dotfiles)) {
+    const to = path.join(directory, file)
+
+    await mkdir(path.dirname(to), { recursive: true })
+    await writeFile(to, content)
+  }
 }
 
 /**
@@ -144,38 +184,6 @@ export async function isUsableDirectory(directory: string): Promise<boolean> {
     return entries.length === 0
   } catch {
     return true
-  }
-}
-
-/**
- * ローカルのひな形を写す。git が管理しているファイルと、ignore されていない未追跡のファイルを対象にする
- * (GitHub から取得したときと同じ中身にするため。node_modules や .env は写さない)
- */
-async function copyLocalTemplate(
-  source: string,
-  directory: string,
-): Promise<void> {
-  const { stdout } = await execFileAsync(
-    'git',
-    ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
-    {
-      cwd: source,
-      maxBuffer: 64 * 1024 * 1024,
-    },
-  )
-
-  for (const file of stdout.split('\0')) {
-    const from = path.join(source, file)
-
-    // 末尾の空要素と、削除したがまだコミットしていないファイル(index に残っている)は飛ばす
-    if (file === '' || !(await isFile(from))) {
-      continue
-    }
-
-    const to = path.join(directory, file)
-
-    await mkdir(path.dirname(to), { recursive: true })
-    await cp(from, to)
   }
 }
 
@@ -215,6 +223,45 @@ async function isFile(target: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/**
+ * git で clone したリポジトリの中で動いているか(npm から取得したパッケージには .git が無い)
+ */
+async function isGitCheckout(): Promise<boolean> {
+  return await isDirectory(path.join(PACKAGE_ROOT, '.git'))
+}
+
+/**
+ * ひな形のファイルを、ひな形のディレクトリからの相対パスで並べる。
+ *
+ * - git で clone したリポジトリ(ひな形の開発中や、`npx github:` のビルド時): git が管理しているファイルと、
+ *   ignore されていない未追跡のファイル。開発中の node_modules や .env を写さないため
+ * - npm から取得したパッケージ: 入っているファイルすべて(npm が ignore されたものを除いて詰めている)
+ */
+async function listTemplateFiles(): Promise<string[]> {
+  if (!(await isGitCheckout())) {
+    return (await findFiles(TEMPLATE_DIRECTORY)).map(file => path.relative(TEMPLATE_DIRECTORY, file))
+  }
+
+  const { stdout } = await execFileAsync(
+    'git',
+    ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+    {
+      cwd: TEMPLATE_DIRECTORY,
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  )
+  const files: string[] = []
+
+  for (const file of stdout.split('\0')) {
+    // 末尾の空要素と、削除したがまだコミットしていないファイル(index に残っている)は飛ばす
+    if (file !== '' && await isFile(path.join(TEMPLATE_DIRECTORY, file))) {
+      files.push(file)
+    }
+  }
+
+  return files
 }
 
 async function rewriteLockfile(

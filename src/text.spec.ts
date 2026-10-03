@@ -1,20 +1,21 @@
+import assert from 'node:assert/strict'
 import {
   describe,
-  expect,
   it,
-} from 'vitest'
+} from 'node:test'
 
 import {
   removeLockfileImporter,
   replaceProjectName,
   stripMarkedBlocks,
+  suggestProjectName,
   toNameVariants,
   validateProjectName,
-} from './text.js'
+} from './text.ts'
 
 describe('toNameVariants', () => {
   it('1語の名前', () => {
-    expect(toNameVariants('shop')).toEqual({
+    assert.deepEqual(toNameVariants('shop'), {
       kebab: 'shop',
       pascal: 'Shop',
       upperSnake: 'SHOP',
@@ -22,7 +23,7 @@ describe('toNameVariants', () => {
   })
 
   it('ハイフンで区切った名前', () => {
-    expect(toNameVariants('my-shop-2')).toEqual({
+    assert.deepEqual(toNameVariants('my-shop-2'), {
       kebab: 'my-shop-2',
       pascal: 'MyShop2',
       upperSnake: 'MY_SHOP_2',
@@ -31,20 +32,21 @@ describe('toNameVariants', () => {
 })
 
 describe('validateProjectName', () => {
-  it.each(['shop', 'my-shop', 'shop2', 'a-1-b'])('%s は使える', (name) => {
-    expect(validateProjectName(name)).toBeUndefined()
-  })
+  for (const name of ['shop', 'my-shop', 'shop2', 'a-1-b']) {
+    it(`${name} は使える`, () => {
+      assert.equal(validateProjectName(name), undefined)
+    })
+  }
 
   it('空は使えない', () => {
-    expect(validateProjectName('')).toBe('プロジェクト名を入力してください')
+    assert.equal(validateProjectName(''), 'プロジェクト名を入力してください')
   })
 
   it('長すぎる名前は使えない', () => {
-    expect(validateProjectName('a'.repeat(31)))
-      .toBe('プロジェクト名は30文字以内にしてください')
+    assert.equal(validateProjectName('a'.repeat(31)), 'プロジェクト名は30文字以内にしてください')
   })
 
-  it.each([
+  for (const name of [
     'Shop',
     '2shop',
     'my_shop',
@@ -53,10 +55,35 @@ describe('validateProjectName', () => {
     'shop-',
     '@scope/shop',
     'my shop',
-  ])('%s は使えない', (name) => {
-    expect(validateProjectName(name)).toBe(
-      'プロジェクト名は英小文字で始め、英小文字・数字・ハイフンだけにしてください(例: my-app)',
-    )
+  ]) {
+    it(`${name} は使えない`, () => {
+      assert.equal(
+        validateProjectName(name),
+        'プロジェクト名は英小文字で始め、英小文字・数字・ハイフンだけにしてください(例: my-app)',
+      )
+    })
+  }
+})
+
+describe('suggestProjectName', () => {
+  for (const [directoryName, expected] of [
+    ['my-app', 'my-app'],
+    ['My App', 'my-app'],
+    ['my_shop.v2', 'my-shop-v2'],
+    ['2024-shop', 'shop'],
+    ['shop--', 'shop'],
+  ] as const) {
+    it(`${directoryName} から ${expected} を作る`, () => {
+      assert.equal(suggestProjectName(directoryName), expected)
+    })
+  }
+
+  it('30文字に切り詰め、末尾のハイフンを落とす', () => {
+    assert.equal(suggestProjectName(`${'a'.repeat(29)}-b`), 'a'.repeat(29))
+  })
+
+  it('英字を含まなければ作れない', () => {
+    assert.equal(suggestProjectName('2024'), undefined)
   })
 })
 
@@ -64,19 +91,21 @@ describe('replaceProjectName', () => {
   const variants = toNameVariants('my-shop')
 
   it('表記ごとに対応する形へ置き換える', () => {
-    expect(replaceProjectName(
-      '@myapp/api MyAppProd MYAPP_OPS_BUCKET /myapp/prod',
-      variants,
-    )).toBe('@my-shop/api MyShopProd MY_SHOP_OPS_BUCKET /my-shop/prod')
+    assert.equal(
+      replaceProjectName('@myapp/api MyAppProd MYAPP_OPS_BUCKET /myapp/prod', variants),
+      '@my-shop/api MyShopProd MY_SHOP_OPS_BUCKET /my-shop/prod',
+    )
   })
 
   it('新しい名前がプレースホルダを含んでいても二重に置き換えない', () => {
-    expect(replaceProjectName('@myapp/api MyAppProd', toNameVariants('myapp-next')))
-      .toBe('@myapp-next/api MyappNextProd')
+    assert.equal(
+      replaceProjectName('@myapp/api MyAppProd', toNameVariants('myapp-next')),
+      '@myapp-next/api MyappNextProd',
+    )
   })
 
   it('プレースホルダがなければそのまま返す', () => {
-    expect(replaceProjectName('pnpm install', variants)).toBe('pnpm install')
+    assert.equal(replaceProjectName('pnpm install', variants), 'pnpm install')
   })
 })
 
@@ -94,7 +123,7 @@ describe('stripMarkedBlocks', () => {
   ].join('\n')
 
   it('remove は印と中身をまとめて消す', () => {
-    expect(stripMarkedBlocks(text, 'infra', 'remove')).toBe([
+    assert.equal(stripMarkedBlocks(text, 'infra', 'remove'), [
       '# README',
       'jobs:',
       '  check: {}',
@@ -102,7 +131,7 @@ describe('stripMarkedBlocks', () => {
   })
 
   it('unwrap は印の行だけを消す', () => {
-    expect(stripMarkedBlocks(text, 'infra', 'unwrap')).toBe([
+    assert.equal(stripMarkedBlocks(text, 'infra', 'unwrap'), [
       '# README',
       '配備の説明',
       'jobs:',
@@ -112,7 +141,7 @@ describe('stripMarkedBlocks', () => {
   })
 
   it('別の印には触れない', () => {
-    expect(stripMarkedBlocks(text, 'template', 'remove')).toBe(text)
+    assert.equal(stripMarkedBlocks(text, 'template', 'remove'), text)
   })
 })
 
@@ -143,7 +172,7 @@ describe('removeLockfileImporter', () => {
   ].join('\n')
 
   it('途中の importer を取り除く', () => {
-    expect(removeLockfileImporter(lockfile, 'apps/infra')).toBe([
+    assert.equal(removeLockfileImporter(lockfile, 'apps/infra'), [
       'importers:',
       '',
       '  .:',
@@ -165,7 +194,7 @@ describe('removeLockfileImporter', () => {
   })
 
   it('最後の importer を取り除く(次の節の手前で止まる)', () => {
-    expect(removeLockfileImporter(lockfile, 'packages/contracts')).toBe([
+    assert.equal(removeLockfileImporter(lockfile, 'packages/contracts'), [
       'importers:',
       '',
       '  .:',
@@ -187,11 +216,13 @@ describe('removeLockfileImporter', () => {
   })
 
   it('ファイルの終わりまで続く importer も取り除く', () => {
-    expect(removeLockfileImporter('importers:\n\n  apps/infra:\n    dependencies: {}\n', 'apps/infra'))
-      .toBe('importers:\n')
+    assert.equal(
+      removeLockfileImporter('importers:\n\n  apps/infra:\n    dependencies: {}\n', 'apps/infra'),
+      'importers:\n',
+    )
   })
 
   it('該当する importer がなければそのまま返す', () => {
-    expect(removeLockfileImporter(lockfile, 'apps/unknown')).toBe(lockfile)
+    assert.equal(removeLockfileImporter(lockfile, 'apps/unknown'), lockfile)
   })
 })

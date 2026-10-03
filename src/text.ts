@@ -104,6 +104,22 @@ export function stripMarkedBlocks(
 }
 
 /**
+ * ディレクトリ名から、プロジェクト名の既定値を作る(`My App` → `my-app`)。
+ * 使える名前にならなければ undefined
+ */
+export function suggestProjectName(directoryName: string): string | undefined {
+  const name = directoryName
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replace(/^[^a-z]+/, '')
+    .replace(/-+$/, '')
+    .slice(0, PROJECT_NAME_MAX_LENGTH)
+    .replace(/-+$/, '')
+
+  return validateProjectName(name) === undefined ? name : undefined
+}
+
+/**
  * プロジェクト名の各表記を求める
  */
 export function toNameVariants(name: string): NameVariants {

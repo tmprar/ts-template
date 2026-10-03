@@ -1,0 +1,48 @@
+# https://lefthook.dev/configuration/
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint-api
+      root: apps/api/
+      glob: 'apps/api/{src,test}/**/*.ts'
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: lint-contracts
+      root: packages/contracts/
+      glob: 'packages/contracts/src/**/*.ts'
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: lint-web
+      root: apps/web/
+      glob: 'apps/web/{app,shared,server}/**/*.{ts,vue}'
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: depcruise
+      glob: 'apps/api/{src,test}/**/*.ts'
+      run: pnpm turbo depcruise
+
+    - name: typecheck
+      glob: '**/*.{ts,vue}'
+      run: pnpm turbo typecheck
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: branch-name
+      run: |
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then exit 0; fi
+        if ! printf '%s' "$branch" | grep -Eq '^(feat|fix|refactor|test|docs|chore)/[a-z0-9]+(-[a-z0-9]+)*$'; then
+          echo "ブランチ名が規約に合っていない: $branch"
+          echo "形式: <type>/<kebab-case>  (type は feat|fix|refactor|test|docs|chore)"
+          echo "例:   feat/link-duration, fix/booking-timezone"
+          exit 1
+        fi

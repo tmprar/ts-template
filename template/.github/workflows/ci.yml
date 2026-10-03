@@ -1,0 +1,153 @@
+# PR で検査する。lefthook はコミット時に staged ファイルだけを見るので、全体の検査は CI を正とする。
+name: ci
+
+on:
+  pull_request:
+
+# 同じブランチの古い run は打ち切る
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 変更のあった領域を判定し、各ジョブを必要なときだけ走らせる(docs だけの PR で何も走らせない)。
+  # ジョブ単位の skip は「skipped」として結果を報告するので required checks と両立する
+  # (workflow の paths で絞ると結果が報告されず PR をマージできなくなる)
+  changes:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      # pull_request では PR の変更ファイル一覧を API から取るので要る
+      pull-requests: read
+    outputs:
+      node: ${{ steps.filter.outputs.node }}
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared: &shared
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'turbo.json'
+              - '.github/workflows/ci.yml'
+              - '!**/*.md'
+            # 静的検査(lint / typecheck / depcruise)。全パッケージが対象
+            node:
+              - *shared
+              - 'apps/**'
+            # api の単体・結合
+            api:
+              - *shared
+              - 'apps/api/**'
+            # web の単体・結合。API クライアントは api の OpenAPI から生成するので apps/api/src も見る
+            web:
+              - *shared
+              - 'apps/web/**'
+              - 'apps/api/src/**'
+
+  # 静的検査: ESLint・型検査・循環 import の検出(全パッケージ)
+  check:
+    needs: [changes]
+    if: needs.changes.outputs.node == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm depcruise
+
+  # api の単体(純関数)。カバレッジを測り、PR にコメントする
+  api-unit:
+    needs: [changes]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      # カバレッジのコメントを PR に付ける
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:cov --filter @myapp/api
+      # テストが失敗しても出ている分のレポートは載せる
+      - if: always()
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          name: api
+          working-directory: apps/api
+
+  # api の結合。DB は testcontainers が起動するので compose も .env も要らない。
+  # vitest がファイル単位で並列実行し worker ごとに専用 DB を持つ。テスト本体は十数秒で
+  # ジョブの固定費(install・イメージ取得)の方が大きいため、シャード分割はしていない
+  api-integration:
+    needs: [changes]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration --filter @myapp/api
+
+  # web の単体(純関数と ESLint ルール)。カバレッジを測り、PR にコメントする
+  web-unit:
+    needs: [changes]
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:cov --filter @myapp/web
+      - if: always()
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          name: web
+          working-directory: apps/web
+
+  # web の結合(Nuxt 環境でのコンポーネント・composable)。サーバもブラウザも起動しない
+  web-integration:
+    needs: [changes]
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration --filter @myapp/web
+

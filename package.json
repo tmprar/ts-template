@@ -1,36 +1,33 @@
 {
-  "name": "myapp",
-  "private": true,
+  "name": "create-ts-template",
+  "version": "0.1.0",
+  "description": "NestJS(API)+ Nuxt(web)のモノレポのひな形からプロジェクトを作る",
   "license": "UNLICENSED",
-  "packageManager": "pnpm@12.4.1",
-  "devEngines": {
-    "runtime": {
-      "name": "node",
-      "version": "24.15.0",
-      "onFail": "download"
-    }
+  "type": "module",
+  "engines": {
+    "node": ">=22"
   },
+  "bin": {
+    "create-ts-template": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "template"
+  ],
   "scripts": {
-    "prepare": "lefthook install",
-    "compose:up": "docker compose up -d --wait --build --remove-orphans",
-    "compose:down": "docker compose down",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "depcruise": "turbo depcruise",
-    "typecheck": "turbo typecheck",
-    "test": "turbo test",
-    "test:cov": "turbo test:cov",
-    "test:integration": "turbo test:integration",
-    "predev": "docker compose up -d --wait --build --remove-orphans",
-    "dev": "dotenv -e .env -- turbo dev generate:api:watch",
-    "predb": "docker compose up -d --wait --build --remove-orphans",
-    "db": "dotenv -e .env -- pnpm --filter @myapp/api db"
+    "build": "tsc -p tsconfig.build.json && node dist/bundle-dotfiles.js",
+    "prepare": "npm run build",
+    "lint": "template/packages/eslint-config/node_modules/.bin/eslint src --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test \"src/**/*.spec.ts\"",
+    "test:cov": "node --test --experimental-test-coverage --test-coverage-include=src/text.ts --test-coverage-branches=100 --test-coverage-functions=100 --test-coverage-lines=100 \"src/**/*.spec.ts\""
+  },
+  "dependencies": {
+    "@clack/prompts": "~1.8.1",
+    "mri": "~1.2.0"
   },
   "devDependencies": {
-    "@commitlint/cli": "~21.2.3",
-    "@commitlint/config-conventional": "~21.2.3",
-    "dotenv-cli": "~11.0.0",
-    "lefthook": "~2.1.12",
-    "turbo": "~2.10.12"
+    "@types/node": "~24.13.4",
+    "typescript": "~6.0.3"
   }
 }

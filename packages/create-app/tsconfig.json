@@ -1,9 +1,0 @@
-{
-  "extends": "@myapp/typescript-config/lib.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "types": ["node"]
-  },
-  "include": ["src"]
-}
