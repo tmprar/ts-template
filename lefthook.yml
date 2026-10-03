@@ -1,8 +1,8 @@
 # https://lefthook.dev/configuration/
 #
-# このリポジトリ(CLI とひな形)の git フック。lefthook は git のルートの設定を読むので、
-# template/lefthook.yml(作ったプロジェクト用)はここでは効かない。ひな形の検査は同じ内容を template/ に向けて並べる。
-# フックは `pnpm --dir template install`(ひな形の prepare の lefthook install)で登録される。
+# このリポジトリ(CLI とテンプレート)の git フック。lefthook は git のルートの設定を読むので、
+# template/lefthook.yml(作ったプロジェクト用)はここでは効かない。テンプレートの検査は同じ内容を template/ に向けて並べる。
+# フックは `pnpm --dir template install`(テンプレートの prepare の lefthook install)で登録される。
 # CLI のジョブはルートの依存を使うので、ルートでも `pnpm install` を済ませておく
 
 pre-commit:

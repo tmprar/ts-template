@@ -42,7 +42,7 @@ export async function runCli(argv) {
         console.log(HELP);
         return 0;
     }
-    intro('ひな形からプロジェクトを作ります');
+    intro('テンプレートからプロジェクトを作ります');
     const answers = await askAnswers({
         directory: flags._[0],
         git: flags.git,
@@ -56,16 +56,16 @@ export async function runCli(argv) {
     }
     const directory = path.resolve(answers.directory);
     const progress = spinner();
-    progress.start('ひな形を写しています');
+    progress.start('テンプレートを写しています');
     try {
         await copyTemplate(directory);
         progress.message('プロジェクトに合わせて書き換えています');
         await applyTemplate(directory, answers.name);
         await copyFile(path.join(directory, '.env.example'), path.join(directory, '.env'));
-        progress.stop('ひな形を用意しました');
+        progress.stop('テンプレートを用意しました');
     }
     catch (error) {
-        progress.stop('ひな形を用意できませんでした');
+        progress.stop('テンプレートを用意できませんでした');
         log.error(error instanceof Error ? error.message : String(error));
         return 1;
     }
@@ -175,6 +175,7 @@ function composeNextSteps(answers) {
         `cd ${/\s/.test(answers.directory) ? `"${answers.directory}"` : answers.directory}`,
         ...(answers.git ? [] : ['git init']),
         ...(answers.install ? [] : ['pnpm install', 'pnpm lint']),
+        'pnpm db migrate',
         'pnpm dev',
     ].join('\n');
 }

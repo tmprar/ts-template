@@ -105,7 +105,7 @@ describe('stripTemplateBlocks', () => {
     expect(stripTemplateBlocks([
       '# README',
       '<!-- template:start -->',
-      'ひな形の説明',
+      'テンプレートの説明',
       '<!-- template:end -->',
       'jobs:',
       '  # template:start',
