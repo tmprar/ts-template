@@ -7,7 +7,7 @@ AWS CDK の空のスタック(`apps/infra`)が入る。
 ## プロジェクトを作る
 
 ```bash
-npx github:tmprar/ts-template#release
+npx 'github:tmprar/ts-template#release'
 ```
 
 GitHub からこのリポジトリの `release` ブランチ(ビルド済みの CLI が入っている)を取得して CLI を起動し、次を尋ねる。答え終わると、ひな形を写して書き換え、
@@ -21,10 +21,10 @@ GitHub からこのリポジトリの `release` ブランチ(ビルド済みの 
 | git リポジトリを初期化するか | `git init --initial-branch main` |
 | 依存をインストールするか | `pnpm install` と `pnpm lint`(lefthook が git のフックを登録するため、リポジトリの初期化が要る)。import の並びはパッケージ名で決まるので、名前を置き換えた後に整える |
 
-引数で答えておくこともできる(`npx github:tmprar/ts-template#release --help`)。
+引数で答えておくこともできる(`npx 'github:tmprar/ts-template#release' --help`)。
 
 ```bash
-npx github:tmprar/ts-template#release my-app --name my-app --yes   # 残りは既定値(すべて「はい」)で進める
+npx 'github:tmprar/ts-template#release' my-app --name my-app --yes   # 残りは既定値(すべて「はい」)で進める
 ```
 
 Node.js 22 以上が要る。作ったプロジェクトの開発には、さらに pnpm と Docker が要る(バージョンはそのプロジェクトの README)。
