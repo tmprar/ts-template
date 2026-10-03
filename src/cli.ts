@@ -259,6 +259,7 @@ function composeNextSteps(answers: Answers): string {
     `cd ${/\s/.test(answers.directory) ? `"${answers.directory}"` : answers.directory}`,
     ...(answers.git ? [] : ['git init']),
     ...(answers.install ? [] : ['pnpm install', 'pnpm lint']),
+    'pnpm db migrate',
     'pnpm dev',
   ].join('\n')
 }
