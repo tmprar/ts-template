@@ -43,7 +43,7 @@ export const envSchema = v.pipe(
       偽の既定値を置くと開発でも本物の API を叩いてしまうため、既定値は置かない
     */
     RESEND_API_KEY: emptyStringAsUndefined,
-    // Sentry。DSN が無ければ送らない。環境と配備の識別は配備時に .env へ書く(未設定なら NODE_ENV)
+    // Sentry。DSN が無ければ送らない。環境とデプロイの識別はデプロイ時に .env へ書く(未設定なら NODE_ENV)
     SENTRY_DSN: v.optional(v.pipe(v.string(), v.url())),
     SENTRY_ENVIRONMENT: v.optional(v.pipe(v.string(), v.nonEmpty())),
     SENTRY_RELEASE: v.optional(v.pipe(v.string(), v.nonEmpty())),

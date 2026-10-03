@@ -1,6 +1,6 @@
 # myapp
 
-NestJS(API)+ Nuxt(web)のモノレポ。ひな形から作った状態では、構成を示すサンプルとして `todo` モジュールと
+NestJS(API)+ Nuxt(web)のモノレポ。テンプレートから作った状態では、構成を示すサンプルとして `todo` モジュールと
 その画面が 1 つ入っている(最初の機能を作るときに置き換える)。
 
 pnpm workspace + Turborepo のモノレポ。
@@ -9,7 +9,7 @@ pnpm workspace + Turborepo のモノレポ。
 - `apps/web/`: Nuxt フロントエンド (`@myapp/web`)
 - `packages/contracts/`: API の入出力スキーマ (`@myapp/contracts`)
 - `packages/typescript-config/`, `packages/eslint-config/`: 共有設定
-- `apps/infra/`: AWS CDK (`@myapp/infra`)。ひな形の時点では空のスタックだけ。配備先はプロジェクトごとに決めて足す
+- `apps/infra/`: AWS CDK (`@myapp/infra`)。テンプレートの時点では空のスタックだけ。デプロイ先はプロジェクトごとに決めて足す
 
 ## コマンド
 
@@ -41,7 +41,7 @@ pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 - web の API クライアントは `apps/api` の OpenAPI から生成する(`app/generated/api/`)。手で書かない
 - API の全ルートは `/api` 接頭辞付き(`app.setup.ts` の `API_PREFIX`)。本番は手前のプロキシが `/api/*` だけを API に流し、web と同一オリジンで配信する前提。開発の API リファレンスは `http://localhost:3000/api/docs`
 - コミット時に lefthook が lint・typecheck・depcruise と commitlint(コミットメッセージ)を走らせる。push 時はブランチ名を検査する
-- 認証はひな形に含めていない。足すときは、セッションの書き込みを `req.session` への代入、読み取りを valibot でのパースにし(共有の型ファイルは作らない)、
+- 認証はテンプレートに含めていない。足すときは、セッションの書き込みを `req.session` への代入、読み取りを valibot でのパースにし(共有の型ファイルは作らない)、
   全ルートの 401 を `test/platform/authentication.spec.ts` の表で一括して見る
 
 ## 規約

@@ -94,7 +94,7 @@ if (!Sentry.isInitialized()) {
       Sentry.nativeNodeFetchIntegration({ breadcrumbs: false }),
       Sentry.httpIntegration({ breadcrumbs: false }),
     ],
-    // 配備したイメージのタグ(コミットの SHA)。どの配備から出始めたかを見る
+    // デプロイしたイメージのタグ(コミットの SHA)。どのデプロイから出始めたかを見る
     release: env.SENTRY_RELEASE,
     /*
       SDK v11 の既定 'stream' はスパンを終了次第に個別に送るため、ignoreTransactions と

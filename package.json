@@ -1,7 +1,7 @@
 {
   "name": "create-ts-template",
   "version": "0.1.0",
-  "description": "NestJS(API)+ Nuxt(web)のモノレポのひな形からプロジェクトを作る",
+  "description": "NestJS(API)+ Nuxt(web)のモノレポのテンプレートからプロジェクトを作る",
   "license": "UNLICENSED",
   "type": "module",
   "engines": {
