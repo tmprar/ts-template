@@ -1,0 +1,2 @@
+# CLI(このディレクトリ)だけの設定。ひな形(template/)は自分の pnpm-workspace.yaml を持つ別のワークスペース
+savePrefix: '~'

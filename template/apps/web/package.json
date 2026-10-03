@@ -1,0 +1,53 @@
+{
+  "name": "@myapp/web",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate:api": "openapi-ts",
+    "generate:api:watch": "wait-on http://localhost:3000/api/openapi.json && openapi-ts --watch -i http://localhost:3000/api/openapi.json | cat",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "lint": "eslint . --fix",
+    "typecheck": "vue-tsc --build --force",
+    "test": "vitest run --project core --project eslint",
+    "test:watch": "vitest --project core --project eslint",
+    "test:integration": "vitest run --project nuxt",
+    "test:cov": "vitest run --coverage --project core --project eslint",
+    "nuxt:prepare": "nuxt prepare",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@myapp/contracts": "workspace:*",
+    "@nuxt/ui": "~4.11.1",
+    "neverthrow": "~8.2.0",
+    "nuxt": "^4.5.2",
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "@myapp/api": "workspace:*",
+    "@myapp/eslint-config": "workspace:*",
+    "@myapp/typescript-config": "workspace:*",
+    "@eslint/compat": "~2.1.1",
+    "@hey-api/openapi-ts": "~0.99.0",
+    "@nuxt/eslint": "~1.17.0",
+    "@nuxt/test-utils": "~4.3.2",
+    "@vitest/coverage-v8": "~4.1.11",
+    "@vue/test-utils": "~2.5.0",
+    "eslint": "~10.10.0",
+    "eslint-import-resolver-typescript": "~4.4.5",
+    "eslint-plugin-boundaries": "~7.2.0",
+    "eslint-plugin-no-relative-import-paths": "~1.6.1",
+    "eslint-plugin-vue": "~10.11.0",
+    "globals": "~17.12.0",
+    "happy-dom": "~20.14.5",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "~8.70.0",
+    "vitest": "~4.1.11",
+    "vue-eslint-parser": "~10.4.1",
+    "vue-tsc": "~3.3.11",
+    "wait-on": "~9.1.0"
+  }
+}

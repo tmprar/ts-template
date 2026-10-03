@@ -1,0 +1,64 @@
+# PR で検査する。template/.github/workflows/ci.yml は作ったプロジェクト用で、このリポジトリでは動かない。
+# ひな形は、CLI で実際にプロジェクトを作り、そのプロジェクトで検査する(書き換えた後の姿が正しいかを見るため)
+name: ci
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # CLI の静的検査と単体テスト
+  cli:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      # CLI は Node・pnpm のバージョンを固定しない(npx で利用者の環境のまま動かす)ので、ひな形の指定に合わせる
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: template/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: template/package.json
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            template/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test:cov
+      - run: pnpm compile
+
+  # CLI でプロジェクトを作り、そのプロジェクトで検査する
+  generated:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      # CLI は Node・pnpm のバージョンを固定しない(npx で利用者の環境のまま動かす)ので、ひな形の指定に合わせる
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: template/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: template/package.json
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            template/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
+      # 名前はハイフン入りにして、各表記(kebab / Pascal / UPPER_SNAKE)への置き換えを通す
+      - run: node dist/index.js "$RUNNER_TEMP/sample-app" --name sample-app --yes
+      - working-directory: ${{ runner.temp }}/sample-app
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm depcruise
+          pnpm test
+          pnpm test:integration

@@ -1,0 +1,41 @@
+# main に入ったら、ビルド済みの dist/ を載せたコミットを release ブランチに積む。
+# main には dist/ を入れず、利用者は `npx github:tmprar/ts-template#release` で release を動かす
+# (npx はビルドしないので、dist/ が入っていないと動かない)
+name: release
+
+on:
+  push:
+    branches: [main]
+
+# 前回の release を親にして積むので、同時に走らせない(打ち切りもしない)
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  # release ブランチへの push
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: template/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: template/package.json
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            template/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
+      - run: scripts/publish-release.sh
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com

@@ -1,0 +1,11 @@
+{
+  "extends": "@myapp/typescript-config/lib.json",
+  "compilerOptions": {
+    // CDK アプリは Node の型剥がし(node bin/app.ts)で直接実行するため、出力しない
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "types": ["node"]
+  },
+  "include": ["bin", "lib"]
+}

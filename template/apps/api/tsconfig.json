@@ -1,0 +1,11 @@
+{
+  "extends": "@myapp/typescript-config/nest.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "incremental": true,
+    "types": ["vitest/globals", "node"]
+  },
+  // 生成物は型検査の対象にしない。coverage の HTML レポートには JS が付き、
+  // allowJs のため対象に入る(test:cov と同時に走ると、書き換え中のファイルを読んで落ちる)
+  "exclude": ["node_modules", "dist", "coverage", ".out"]
+}

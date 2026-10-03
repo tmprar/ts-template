@@ -1,0 +1,65 @@
+# ts-template
+
+NestJS(API)+ Nuxt(web)のモノレポのテンプレートと、そこからプロジェクトを作る CLI(`npx github:tmprar/ts-template#release`)。
+create-vite と同じく、テンプレートの中身を `template/` に置き、CLI がそれを写して書き換える。
+
+- `template/`: テンプレートの中身。作ったプロジェクトにそのまま写る。中の構成・規約・コマンドは `template/CLAUDE.md` が正
+- `src/`: CLI(`create-ts-template`)。`cli.ts` が対話(`@clack/prompts`)と引数(`mri`)、`template.ts` がファイル操作、
+  `text.ts` が文字列の書き換え(純関数)
+- ルートの `package.json`・`lefthook.yml`・`.github/workflows/ci.yml` はこのリポジトリ用。
+  作ったプロジェクトのものは `template/` の下にある
+
+## テンプレートとしての約束
+
+作ったプロジェクトへ持ち込みたくない記述は、次の約束で CLI が取り除く。
+
+- プロジェクト名は `myapp`(scope・コンテナ名・パス)/ `MyApp`(CDK のスタック名)/ `MYAPP`(環境変数の接頭辞)の
+  3 つの表記だけで書く。CLI が 1 回の走査で置き換えるので、他の表記(`my-app`、`my_app`)を作らない
+- `<!-- template:start -->` 〜 `<!-- template:end -->`(YAML では `# template:start` 〜 `# template:end`)は、作ったプロジェクトから中身ごと消える。
+  印は 1 行に単独で書く。コードブロックと表の中には書けないので、消したい内容は箇条書きか段落にする
+- `apps/infra`(AWS CDK)は常に含める。含めるかどうかの分岐は作らない
+- テンプレートを変えたら、`pnpm compile && node dist/index.js <dir> --name sample-app --yes` で実際に作り、
+  作ったプロジェクトで lint・typecheck・depcruise・テストが通ることを確かめる
+
+## コマンド
+
+```bash
+pnpm install                  # CLI の依存
+pnpm --dir template install   # テンプレートの依存。git のフックもここで登録される
+pnpm compile                  # tsc と、dist/dotfiles.json の書き出し(dist はコミットしない)
+pnpm lint                     # ESLint(--fix 付き)
+pnpm typecheck
+pnpm test                     # vitest(text.ts の純関数)
+pnpm test:cov                 # カバレッジ付き(text.ts は 100% を要求する)
+```
+
+テンプレートの中のコマンドは `template/` に移って実行する(`template/CLAUDE.md` の「コマンド」)。
+
+## 前提(知らないと踏む)
+
+- `dist/` は main にコミットしない。main に入ると `.github/workflows/release.yml` が `pnpm compile` し、main の中身に `dist/` を
+  加えたコミットを `release` ブランチに積む(`scripts/publish-release.sh`。前回の release を親にするので force push しない)。
+  利用者はビルドせずに `#release` を動かす。`release` ブランチを手で触らない
+- `bin/create-ts-template.js` は素の JS(ビルドしない入口)。`dist/` が無ければ `#release` の付け忘れとして案内する
+- ルートの `package.json` に `prepare`・`build`・`install` 系・`prepack` のスクリプトを書かない。npm は git の依存にこれらが
+  あると、clone 先で devDependencies まで入れる(`build` があるだけで npx が約 2 秒から約 22 秒になった)。ビルドは `compile` と呼ぶ
+- CLI の ESLint 設定(`eslint.config.mjs`)と tsconfig は CLI のもので、テンプレート(`template/`)の設定とは別に持つ。
+  テンプレートのファイルは読まない。規則を揃える約束も無い
+- npm は `.gitignore` と `.npmrc` をパッケージに入れない。ビルド時に `template/` の中のそれらを `dist/dotfiles.json` に
+  書き出し、npm から取得したときだけ CLI が戻す。git で clone したリポジトリから動かすときは `git ls-files` で写す
+  (開発中の `node_modules` や `.env` を写さないため)
+- ルートの `package.json` に `packageManager`・`devEngines` を書かない。`npx` の install が利用者の Node・pnpm のバージョンで止まる
+- git のフックはルートの `lefthook.yml`。lefthook は git のルートの設定しか読まないので、`template/lefthook.yml` は
+  作ったプロジェクトでだけ効く。テンプレートの検査を変えたら両方を合わせる
+
+## 作業ルール
+
+進め方・検証・コミットとブランチの規約は `template/docs/workflow.md` に従う。ただし要件 ID はテンプレートには無いので付けない
+(例: `feat: npx でリポジトリを指定してプロジェクトを作れるようにする`)。
+判断が必要な場面の結果は `docs/decisions.md` に追記する。
+
+## やらないこと
+
+- `git push` は指示があるまで実行しない
+- force 操作、履歴の書き換えはしない
+- PR は squash マージで取り込む。ブランチは必ず main から切る

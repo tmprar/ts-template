@@ -1,0 +1,11 @@
+# ひな形の中(template/)は、ひな形自身の .gitignore が効く
+node_modules/
+coverage/
+*.log
+.DS_Store
+
+# Playwright MCP の出力(スナップショット・スクリーンショット・コンソールログ)
+.playwright-mcp/
+
+# ビルド結果。main には入れず、release ブランチにだけ CI が載せる(.github/workflows/release.yml)
+dist/

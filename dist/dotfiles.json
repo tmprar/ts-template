@@ -1,0 +1,6 @@
+{
+  ".gitignore": "# compiled output\ndist/\nnode_modules/\n/build\n\n# Logs\nlogs\n*.log\nnpm-debug.log*\npnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\nlerna-debug.log*\n\n# OS\n.DS_Store\n\n# Tests\ncoverage/\n/.nyc_output\n\n# IDEs and editors\n/.idea\n.project\n.classpath\n.c9/\n*.launch\n.settings/\n*.sublime-workspace\n\n# IDE - VSCode\n.vscode/*\n!.vscode/settings.json\n!.vscode/tasks.json\n!.vscode/launch.json\n!.vscode/extensions.json\n\n# dotenv environment variable files\n.env\n.env.development.local\n.env.test.local\n.env.production.local\n.env.local\n\n# temp directory\n.temp\n.tmp\n\n# Runtime data\npids\n*.pid\n*.seed\n*.pid.lock\n\n# Diagnostic reports (https://nodejs.org/api/report.html)\nreport.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json\n\n*.tsbuildinfo\n\n# Turborepo\n.turbo/\n\n# Playwright MCP の出力(スナップショット・スクリーンショット・コンソールログ)\n.playwright-mcp/\n\n# CDK\ncdk.out/\n",
+  ".npmrc": "registry=https://npm.flatt.tech\nmanage-package-manager-versions=true\n",
+  "apps/api/.gitignore": ".out/\n",
+  "apps/web/.gitignore": "# Nuxt dev/build outputs\n.output\n.data\n.nuxt\n.nitro\n.cache\ndist\n\n# Node dependencies\nnode_modules\n\n# Logs\nlogs\n*.log\n\n# Misc\n.DS_Store\n.fleet\n.idea\n\n# Local env files\n.env\n.env.*\n!.env.example\n\n# hey-apiの生成物\napp/generated\n\n# カバレッジレポート\ncoverage\n"
+}

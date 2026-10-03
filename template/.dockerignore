@@ -1,0 +1,13 @@
+# apps/api/Dockerfile 用。turbo prune が workspace 全体を読むため、パッケージは除外しない
+**/node_modules
+**/dist
+**/.output
+**/.nuxt
+**/.turbo
+**/.out
+**/cdk.out
+docs
+apps/infra/cdk.out
+.git
+.env
+*.png

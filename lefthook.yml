@@ -1,0 +1,65 @@
+# https://lefthook.dev/configuration/
+#
+# このリポジトリ(CLI とひな形)の git フック。lefthook は git のルートの設定を読むので、
+# template/lefthook.yml(作ったプロジェクト用)はここでは効かない。ひな形の検査は同じ内容を template/ に向けて並べる。
+# フックは `pnpm --dir template install`(ひな形の prepare の lefthook install)で登録される。
+# CLI のジョブはルートの依存を使うので、ルートでも `pnpm install` を済ませておく
+
+pre-commit:
+  parallel: true
+  jobs:
+    # 既定の glob では `**` が 0 階層に一致しないので、直下も並べる
+    - name: lint-cli
+      glob: ['src/*.ts', 'src/**/*.ts']
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: typecheck-cli
+      glob: ['src/*.ts', 'src/**/*.ts']
+      run: pnpm typecheck
+
+    - name: lint-api
+      root: template/apps/api/
+      glob: 'template/apps/api/{src,test}/**/*.ts'
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: lint-contracts
+      root: template/packages/contracts/
+      glob: 'template/packages/contracts/src/**/*.ts'
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: lint-web
+      root: template/apps/web/
+      glob: 'template/apps/web/{app,shared,server}/**/*.{ts,vue}'
+      run: pnpm exec eslint {staged_files} --fix
+      stage_fixed: true
+
+    - name: depcruise
+      root: template/
+      glob: 'template/apps/api/{src,test}/**/*.ts'
+      run: pnpm turbo depcruise
+
+    - name: typecheck
+      root: template/
+      glob: 'template/**/*.{ts,vue}'
+      run: pnpm turbo typecheck
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: template/node_modules/.bin/commitlint --config template/commitlint.config.mjs --edit {1}
+
+pre-push:
+  jobs:
+    - name: branch-name
+      run: |
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then exit 0; fi
+        if ! printf '%s' "$branch" | grep -Eq '^(feat|fix|refactor|test|docs|chore)/[a-z0-9]+(-[a-z0-9]+)*$'; then
+          echo "ブランチ名が規約に合っていない: $branch"
+          echo "形式: <type>/<kebab-case>  (type は feat|fix|refactor|test|docs|chore)"
+          echo "例:   feat/link-duration, fix/booking-timezone"
+          exit 1
+        fi

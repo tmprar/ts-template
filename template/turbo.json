@@ -1,0 +1,73 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "globalPassThroughEnv": ["*"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "depcruise": {},
+    "lint": {},
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "test:cov": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:integration": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "@myapp/api#generate:openapi": {
+      "dependsOn": ["build"],
+      "outputs": [".out/**"]
+    },
+    "@myapp/web#nuxt:prepare": {
+      "cache": false
+    },
+    "@myapp/web#generate:api": {
+      "dependsOn": ["@myapp/api#generate:openapi"],
+      "outputs": ["app/generated/api/**"]
+    },
+    "@myapp/web#generate:api:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "@myapp/web#build": {
+      "dependsOn": ["^build", "generate:api"],
+      "outputs": [".output/**"]
+    },
+    "@myapp/web#generate": {
+      "dependsOn": ["^build", "generate:api"],
+      "outputs": [".output/**"]
+    },
+    "@myapp/web#test": {
+      "dependsOn": ["^build", "nuxt:prepare", "generate:api"]
+    },
+    "@myapp/web#test:integration": {
+      "dependsOn": ["^build", "nuxt:prepare", "generate:api"]
+    },
+    "@myapp/web#test:cov": {
+      "dependsOn": ["^build", "nuxt:prepare", "generate:api"],
+      "outputs": ["coverage/**"]
+    },
+    "@myapp/web#lint": {
+      "dependsOn": ["nuxt:prepare", "generate:api"]
+    },
+    "@myapp/web#typecheck": {
+      "dependsOn": ["^build", "nuxt:prepare", "generate:api"]
+    },
+    "@myapp/web#dev": {
+      "cache": false,
+      "dependsOn": ["generate:api"],
+      "persistent": true
+    }
+  }
+}

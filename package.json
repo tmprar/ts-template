@@ -1,0 +1,43 @@
+{
+  "name": "create-ts-template",
+  "version": "0.1.0",
+  "description": "NestJS(API)+ Nuxt(web)のモノレポのひな形からプロジェクトを作る",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "create-ts-template": "./bin/create-ts-template.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "template"
+  ],
+  "scripts": {
+    "compile": "tsc -p tsconfig.build.json && node dist/bundle-dotfiles.js",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@clack/prompts": "~1.8.1",
+    "mri": "~1.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "~10.0.1",
+    "@stylistic/eslint-plugin": "~5.10.0",
+    "@types/node": "~24.13.4",
+    "@vitest/coverage-v8": "~4.1.11",
+    "eslint": "~10.10.0",
+    "eslint-plugin-import-newlines": "~2.0.0",
+    "eslint-plugin-perfectionist": "~5.11.0",
+    "eslint-plugin-unicorn": "~74.0.0",
+    "globals": "~17.12.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "~8.70.0",
+    "vitest": "~4.1.11"
+  }
+}
