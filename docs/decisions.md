@@ -9,7 +9,7 @@
 - 決定: `dist/` は main にコミットせず、main に入ったら CI がビルドして `release` ブランチに積む。利用者は `#release` を指定する。`prepare` は書かず、ビルドのスクリプトも `build` ではなく `compile` と呼ぶ
 - 理由: `npx github:` はビルドしないので、ビルド済みの `dist/` が要る。main にコミットすると PR の差分に混ざり、並行する PR どうしで衝突する
 - 理由: npm は git の依存に `prepare`・`build`・`install` 系・`prepack` のスクリプトがあると、clone 先で devDependencies まで入れる。`build` があるだけで npx がキャッシュなしで約 22 秒かかり、外すと約 2 秒になった(npm.flatt.tech で計測)
-- 決定: CLI の ESLint 設定と tsconfig はテンプレートのファイルを読まず、写しを自分で持つ
+- 決定: CLI の ESLint 設定(`eslint.config.mjs`)と tsconfig は CLI 専用に持つ。テンプレートのファイルは読まず、規則を揃えることもしない
 - 決定: install の後に `pnpm lint` を流す
 - 理由: import の並びはパッケージ名で決まるため、`@myapp` を置き換えると規約から外れるファイルが出る(`@sample-app/contracts` が `@nestjs/*` より後ろに来る)。最初のコミットに整形の差分を混ぜない
 - 決定: npm がパッケージから落とす `.gitignore` と `.npmrc` は、ビルド時に `dist/dotfiles.json` に書き出して CLI が戻す。create-vite のように `_gitignore` へ改名しない

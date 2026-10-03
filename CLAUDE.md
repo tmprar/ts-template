@@ -43,8 +43,8 @@ pnpm test:cov                 # カバレッジ付き(text.ts は 100% を要求
 - `bin/create-ts-template.js` は素の JS(ビルドしない入口)。`dist/` が無ければ `#release` の付け忘れとして案内する
 - ルートの `package.json` に `prepare`・`build`・`install` 系・`prepack` のスクリプトを書かない。npm は git の依存にこれらが
   あると、clone 先で devDependencies まで入れる(`build` があるだけで npx が約 2 秒から約 22 秒になった)。ビルドは `compile` と呼ぶ
-- CLI はテンプレート(`template/`)のファイルを読まずにビルド・lint する。ESLint の規則は `template/packages/eslint-config/index.mjs` の
-  写しを `eslint.shared.mjs` に持ち、tsconfig も自分で持つ。テンプレートの共有設定を変えたら写しも合わせる
+- CLI の ESLint 設定(`eslint.config.mjs`)と tsconfig は CLI のもので、テンプレート(`template/`)の設定とは別に持つ。
+  テンプレートのファイルは読まない。規則を揃える約束も無い
 - npm は `.gitignore` と `.npmrc` をパッケージに入れない。ビルド時に `template/` の中のそれらを `dist/dotfiles.json` に
   書き出し、npm から取得したときだけ CLI が戻す。git で clone したリポジトリから動かすときは `git ls-files` で写す
   (開発中の `node_modules` や `.env` を写さないため)
