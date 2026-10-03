@@ -48,6 +48,7 @@
     "@sentry/nestjs": "~11.0.0",
     "@valibot/to-json-schema": "~1.4.0",
     "drizzle-orm": "~0.45.2",
+    "eta": "~4.6.0",
     "nestjs-cls": "~6.3.0",
     "nestjs-pino": "~5.2.0",
     "neverthrow": "~8.2.0",

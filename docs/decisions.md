@@ -21,3 +21,12 @@
 - 決定: `ci.yml`(`cli`・`generated`)と `release.yml` は、Node(`24`)と pnpm(`12`)をワークフローに直接書く。`template/package.json` からは読まない
 - 理由: CLI の検査がテンプレートのファイルに依存すると、テンプレートの版を上げただけで CLI を検査する版まで変わり、`engines` の約束(下限)を確かめられなくなる。CLI は `packageManager`・`devEngines` を書けない(`npx` が利用者の環境で止まる)ので、書く場所はワークフローになる
 - 理由: `generated` も、利用者と同じく CLI を動かす環境だけを用意する。作ったプロジェクトが要求する版には、そのプロジェクトの `packageManager`・`devEngines`(`onFail: download`)を見て pnpm が切り替えるので、この仕組みが効くことも併せて確かめられる
+
+## 2026-10-04 メールの送信は Usecase が MailService を呼び、件名と本文は Domain の build 関数で組み立てる
+- 決定: サンプルの `todo` から `MailTodoGateway` と `TodoGateway` の interface を消し、`TodoUsecase` が `MailService`(`platform/mail`)を直接呼ぶ。宛先(`TODO_NOTICE_MAIL_TO`)の解決も Usecase に移す
+- 決定: 件名と本文は Domain の `buildCompletedTodoMail` が組み立てる。本文は eta のテンプレートにして、モジュールの `assets/`(`assets/completed-todo-mail.eta`)に置く。件名は 1 行なので build 関数に直接書く
+- 決定: `eta` を API の依存に加える(採用済みのスタックの外だが、指示による)。平文のメールなので `autoEscape` は切る
+- 決定: `nest build` はテンプレートを `dist/` に写さないので、`nest-cli.json` の `assets` に `modules/*/assets/**/*` を足す
+- 理由: Domain がテンプレートのファイルを読むことになるが、テンプレートはコードと一緒に配る固定の資産で、内容は実行中に変わらない。Domain の単体テストで件名と本文を確かめられる
+- 決定: Gateway の規約(`template/CLAUDE.md`)は残す。サンプルに実装は無くなるが、モジュールが外部サービスと直接やり取りするときの置き場所として要る
+- 要確認: 本文の末尾に改行が付くようになった(テンプレートのファイルの末尾の改行がそのまま出る)。付けないなら build 関数で落とす
