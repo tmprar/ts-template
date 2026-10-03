@@ -1,9 +1,9 @@
 /**
- * ひな形の文字列を書き換える純関数。ファイルの読み書きは template.ts が持つ
+ * テンプレートの文字列を書き換える純関数。ファイルの読み書きは template.ts が持つ
  */
 
 /**
-プロジェクト名の各表記。ひな形の中のプレースホルダ(myapp / MyApp / MYAPP)と対応する
+プロジェクト名の各表記。テンプレートの中のプレースホルダ(myapp / MyApp / MYAPP)と対応する
 */
 export type NameVariants = {
   /**
@@ -54,7 +54,7 @@ const START_MARKERS = new Set(['# template:start', '<!-- template:start -->'])
 const END_MARKERS = new Set(['# template:end', '<!-- template:end -->'])
 
 /**
- * `template:start` 〜 `template:end` の印で囲んだ範囲を、印ごと消す(ひな形にだけ要る記述)。
+ * `template:start` 〜 `template:end` の印で囲んだ範囲を、印ごと消す(テンプレートにだけ要る記述)。
  * 印は1行に単独で書く(`<!-- template:start -->` または `# template:start`)
  */
 export function stripTemplateBlocks(text: string): string {

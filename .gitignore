@@ -1,4 +1,4 @@
-# ひな形の中(template/)は、ひな形自身の .gitignore が効く
+# テンプレートの中(template/)は、テンプレート自身の .gitignore が効く
 node_modules/
 coverage/
 *.log

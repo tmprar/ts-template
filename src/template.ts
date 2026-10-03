@@ -26,7 +26,7 @@ const execFileAsync = promisify(execFile)
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
 /**
-ひな形の置き場
+テンプレートの置き場
 */
 export const TEMPLATE_DIRECTORY = path.join(PACKAGE_ROOT, 'template')
 
@@ -56,7 +56,7 @@ const SKIPPED_DIRECTORIES = new Set([
 const PLACEHOLDER_IN_PATH = /myapp/
 
 /**
- * 写したひな形を、指定のプロジェクトとして使える形に書き換える
+ * 写したテンプレートを、指定のプロジェクトとして使える形に書き換える
  */
 export async function applyTemplate(directory: string, name: string): Promise<void> {
   const variants = toNameVariants(name)
@@ -92,7 +92,7 @@ export async function applyTemplate(directory: string, name: string): Promise<vo
 }
 
 /**
- * npm がパッケージに含めないドットファイルの中身を、ひな形の中のパスごとに集める(ビルド時に使う)
+ * npm がパッケージに含めないドットファイルの中身を、テンプレートの中のパスごとに集める(ビルド時に使う)
  */
 export async function collectDotfiles(): Promise<Record<string, string>> {
   const dotfiles: Record<string, string> = {}
@@ -108,7 +108,7 @@ export async function collectDotfiles(): Promise<Record<string, string>> {
 }
 
 /**
- * ひな形を写す
+ * テンプレートを写す
  */
 export async function copyTemplate(directory: string): Promise<void> {
   const files = await listTemplateFiles()
@@ -194,9 +194,9 @@ async function isGitCheckout(): Promise<boolean> {
 }
 
 /**
- * ひな形のファイルを、ひな形のディレクトリからの相対パスで並べる。
+ * テンプレートのファイルを、テンプレートのディレクトリからの相対パスで並べる。
  *
- * - git で clone したリポジトリ(ひな形の開発中や、`npx github:` のビルド時): git が管理しているファイルと、
+ * - git で clone したリポジトリ(テンプレートの開発中や、`npx github:` のビルド時): git が管理しているファイルと、
  *   ignore されていない未追跡のファイル。開発中の node_modules や .env を写さないため
  * - npm から取得したパッケージ: 入っているファイルすべて(npm が ignore されたものを除いて詰めている)
  */

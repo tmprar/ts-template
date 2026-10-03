@@ -17,7 +17,7 @@ import { PinoLogger } from 'nestjs-pino'
  * 5xx はスタック付きで error でログに記録する
  * 4xx は利用者の入力の問題なので記録しない
  *
- * Sentryへもここから送る。原因の切り分け(グルーピング・影響ユーザー・配備との紐付け)は Sentry、
+ * Sentryへもここから送る。原因の切り分け(グルーピング・影響ユーザー・デプロイとの紐付け)は Sentry、
  * 記録は CloudWatch Logs と役割を分ける。
  */
 @Catch()
