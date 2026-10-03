@@ -5,7 +5,6 @@ import {
   readdir,
   readFile,
   rename,
-  rm,
   stat,
   writeFile,
 } from 'node:fs/promises'
@@ -14,11 +13,10 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import {
-  removeLockfileImporter,
   replaceProjectName,
-  stripMarkedBlocks,
+  stripTemplateBlocks,
   toNameVariants,
-} from './text.ts'
+} from './text.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -41,11 +39,6 @@ const DOTFILES_DROPPED_BY_NPM = new Set(['.gitignore', '.npmrc'])
 export const DOTFILES_PATH = fileURLToPath(new URL('dotfiles.json', import.meta.url))
 
 /**
-インフラを含めないときに消すもの
-*/
-const INFRA_PATHS = ['apps/infra']
-
-/**
 中身を書き換えないディレクトリ(依存と生成物)
 */
 const SKIPPED_DIRECTORIES = new Set([
@@ -62,34 +55,11 @@ const SKIPPED_DIRECTORIES = new Set([
 
 const PLACEHOLDER_IN_PATH = /myapp/
 
-export type TemplateOptions = {
-  /**
-  AWS CDK のパッケージ(apps/infra。空のスタックだけ)を含めるか
-  */
-  infra: boolean
-  /**
-  プロジェクト名(kebab-case)
-  */
-  name: string
-}
-
 /**
  * 写したひな形を、指定のプロジェクトとして使える形に書き換える
  */
-export async function applyTemplate(
-  directory: string,
-  options: TemplateOptions,
-): Promise<void> {
-  const removedPaths = options.infra ? [] : INFRA_PATHS
-
-  for (const removedPath of removedPaths) {
-    await rm(path.join(directory, removedPath), {
-      force: true,
-      recursive: true,
-    })
-  }
-
-  const variants = toNameVariants(options.name)
+export async function applyTemplate(directory: string, name: string): Promise<void> {
+  const variants = toNameVariants(name)
   const files = await findFiles(directory)
 
   for (const file of files) {
@@ -101,14 +71,7 @@ export async function applyTemplate(
     }
 
     const original = buffer.toString('utf8')
-    const rewritten = replaceProjectName(
-      stripMarkedBlocks(
-        stripMarkedBlocks(original, 'template', 'remove'),
-        'infra',
-        options.infra ? 'unwrap' : 'remove',
-      ),
-      variants,
-    )
+    const rewritten = replaceProjectName(stripTemplateBlocks(original), variants)
 
     if (rewritten !== original) {
       await writeFile(file, rewritten)
@@ -126,8 +89,6 @@ export async function applyTemplate(
       )
     }
   }
-
-  await rewriteLockfile(directory, removedPaths)
 }
 
 /**
@@ -262,26 +223,4 @@ async function listTemplateFiles(): Promise<string[]> {
   }
 
   return files
-}
-
-async function rewriteLockfile(
-  directory: string,
-  removedImporters: string[],
-): Promise<void> {
-  const lockfilePath = path.join(directory, 'pnpm-lock.yaml')
-
-  if (!(await isFile(lockfilePath))) {
-    return
-  }
-
-  const original = await readFile(lockfilePath, 'utf8')
-  let rewritten = original
-
-  for (const importer of removedImporters) {
-    rewritten = removeLockfileImporter(rewritten, importer)
-  }
-
-  if (rewritten !== original) {
-    await writeFile(lockfilePath, rewritten)
-  }
 }

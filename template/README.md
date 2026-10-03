@@ -9,9 +9,7 @@ NestJS(API)+ Nuxt(web)を pnpm workspace + Turborepo でまとめたモノレポ
 - `packages/contracts/`: API の入出力スキーマ (`@myapp/contracts`)
 - `packages/typescript-config/`: 共有 tsconfig (`@myapp/typescript-config`)
 - `packages/eslint-config/`: 共有 ESLint 設定 (`@myapp/eslint-config`)
-<!-- infra:start -->
 - `apps/infra/`: AWS CDK (`@myapp/infra`)。ひな形の時点では空のスタックだけ
-<!-- infra:end -->
 
 ## セットアップ
 
@@ -80,9 +78,7 @@ pnpm --filter @myapp/api dev
 
 - `apps/api/Dockerfile`: API の本番イメージ(`docker build -f apps/api/Dockerfile -t myapp-api .`)。マイグレーションは `node dist/scripts/migrate` で適用する
 - web は `pnpm turbo run generate --filter @myapp/web` で静的に生成する(`apps/web/.output/public`)。API と同一オリジンで配信し、`/api/*` だけを API に流す前提
-<!-- infra:start -->
 - `apps/infra`: AWS CDK の空のスタック(`lib/stacks/app-stack.ts`)。AWS に配備するならここへリソースを足す
-<!-- infra:end -->
 
 ## ドキュメント
 

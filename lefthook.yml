@@ -2,7 +2,8 @@
 #
 # このリポジトリ(CLI とひな形)の git フック。lefthook は git のルートの設定を読むので、
 # template/lefthook.yml(作ったプロジェクト用)はここでは効かない。ひな形の検査は同じ内容を template/ に向けて並べる。
-# フックは `pnpm --dir template install`(ひな形の prepare の lefthook install)で登録される
+# フックは `pnpm --dir template install`(ひな形の prepare の lefthook install)で登録される。
+# CLI のジョブはルートの依存を使うので、ルートでも `pnpm install` を済ませておく
 
 pre-commit:
   parallel: true
@@ -10,8 +11,19 @@ pre-commit:
     # 既定の glob では `**` が 0 階層に一致しないので、直下も並べる
     - name: lint-cli
       glob: ['src/*.ts', 'src/**/*.ts']
-      run: template/packages/eslint-config/node_modules/.bin/eslint {staged_files} --fix
+      run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
+
+    # dist はコミットする(npx でビルドせずに動かすため)。ソースか、dist/dotfiles.json に写すドットファイルが変わったら作り直して載せる
+    - name: build-cli
+      glob:
+        - 'src/*.ts'
+        - 'src/**/*.ts'
+        - 'template/.gitignore'
+        - 'template/**/.gitignore'
+        - 'template/.npmrc'
+        - 'template/**/.npmrc'
+      run: pnpm compile && git add dist
 
     - name: typecheck-cli
       glob: ['src/*.ts', 'src/**/*.ts']

@@ -1,5 +1,4 @@
 # ひな形の中(template/)は、ひな形自身の .gitignore が効く
-dist/
 node_modules/
 coverage/
 *.log

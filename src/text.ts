@@ -30,28 +30,6 @@ const PROJECT_NAME_MAX_LENGTH = 30
 const PLACEHOLDER_PATTERN = /MyApp|MYAPP|myapp/g
 
 /**
- * pnpm-lock.yaml から、消したパッケージの importer を取り除く。
- * 残したままだと `pnpm install --frozen-lockfile` がワークスペースとの不一致で失敗する。
- * そのパッケージだけが使っていた依存の記述は残るが、次の install で pnpm が掃除する
- */
-export function removeLockfileImporter(lockfile: string, importerPath: string): string {
-  const lines = lockfile.split('\n')
-  const start = lines.indexOf(`  ${importerPath}:`)
-
-  if (start === -1) {
-    return lockfile
-  }
-
-  // importer の中身は4スペース以上の字下げか空行。次の importer か次の節で終わる
-  const length = lines
-    .slice(start + 1)
-    .findIndex(line => line !== '' && !line.startsWith(' '.repeat(4)))
-  const end = length === -1 ? lines.length : start + 1 + length
-
-  return [...lines.slice(0, start), ...lines.slice(end)].join('\n')
-}
-
-/**
  * プレースホルダをプロジェクト名に置き換える。
  * 新しい名前がプレースホルダを含んでいても二重に置き換わらないよう、1回の走査で行う
  */
@@ -71,31 +49,26 @@ export function replaceProjectName(text: string, variants: NameVariants): string
   })
 }
 
+const START_MARKERS = new Set(['# template:start', '<!-- template:start -->'])
+
+const END_MARKERS = new Set(['# template:end', '<!-- template:end -->'])
+
 /**
- * `<tag>:start` 〜 `<tag>:end` の印で囲んだ範囲を処理する。
- * 印は1行に単独で書く(`<!-- infra:start -->` または `# infra:start`)。
- *
- * - `remove`: 印と中身をまとめて消す
- * - `unwrap`: 印の行だけを消し、中身は残す
+ * `template:start` 〜 `template:end` の印で囲んだ範囲を、印ごと消す(ひな形にだけ要る記述)。
+ * 印は1行に単独で書く(`<!-- template:start -->` または `# template:start`)
  */
-export function stripMarkedBlocks(
-  text: string,
-  tag: string,
-  mode: 'remove' | 'unwrap',
-): string {
-  const startMarkers = new Set([`# ${tag}:start`, `<!-- ${tag}:start -->`])
-  const endMarkers = new Set([`# ${tag}:end`, `<!-- ${tag}:end -->`])
+export function stripTemplateBlocks(text: string): string {
   const kept: string[] = []
   let isInside = false
 
   for (const line of text.split('\n')) {
     const marker = line.trim()
 
-    if (startMarkers.has(marker)) {
+    if (START_MARKERS.has(marker)) {
       isInside = true
-    } else if (endMarkers.has(marker)) {
+    } else if (END_MARKERS.has(marker)) {
       isInside = false
-    } else if (!isInside || mode === 'unwrap') {
+    } else if (!isInside) {
       kept.push(line)
     }
   }

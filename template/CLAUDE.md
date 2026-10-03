@@ -9,9 +9,7 @@ pnpm workspace + Turborepo のモノレポ。
 - `apps/web/`: Nuxt フロントエンド (`@myapp/web`)
 - `packages/contracts/`: API の入出力スキーマ (`@myapp/contracts`)
 - `packages/typescript-config/`, `packages/eslint-config/`: 共有設定
-<!-- infra:start -->
 - `apps/infra/`: AWS CDK (`@myapp/infra`)。ひな形の時点では空のスタックだけ。配備先はプロジェクトごとに決めて足す
-<!-- infra:end -->
 
 ## コマンド
 
@@ -30,10 +28,8 @@ pnpm depcruise  # 循環 import の検出
 pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 ```
 
-<!-- infra:start -->
 インフラは `pnpm --filter @myapp/infra cdk <deploy|diff|synth>`(deploy と diff には AWS 認証情報が必要)。
 
-<!-- infra:end -->
 `--filter` で直接実行するとルート `.env` の注入も DB コンテナの起動も行われない。通常はルートのスクリプトを使う。
 
 ## 前提(知らないと踏む)

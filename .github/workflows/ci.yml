@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  # CLI の静的検査と単体テスト。lint はひな形の共有 ESLint 設定を使うので、ひな形の依存も入れる
+  # CLI の静的検査と単体テスト。dist はコミットしているので、ソースから作り直して差分が無いことも見る
   cli:
     runs-on: ubuntu-24.04
     steps:
@@ -30,19 +30,21 @@ jobs:
             pnpm-lock.yaml
             template/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --dir template install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test:cov
-      - run: pnpm build
+      - run: pnpm compile
+      - name: dist がソースと一致しているか
+        run: |
+          if [ -n "$(git status --porcelain -- dist)" ]; then
+            git status --short -- dist
+            echo "dist が古い。pnpm compile を実行してコミットする"
+            exit 1
+          fi
 
-  # CLI でプロジェクトを作り、そのプロジェクトで検査する。インフラを含める場合と含めない場合の両方
+  # コミットされた dist の CLI でプロジェクトを作り、そのプロジェクトで検査する
   generated:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        infra: [infra, no-infra]
     steps:
       - uses: actions/checkout@v5
       # CLI は Node・pnpm のバージョンを固定しない(npx で利用者の環境のまま動かす)ので、ひな形の指定に合わせる
@@ -56,10 +58,10 @@ jobs:
           cache-dependency-path: |
             pnpm-lock.yaml
             template/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      # CLI の実行時の依存(@clack/prompts と mri)だけ入れる
+      - run: pnpm install --frozen-lockfile --prod
       # 名前はハイフン入りにして、各表記(kebab / Pascal / UPPER_SNAKE)への置き換えを通す
-      - run: node dist/index.js "$RUNNER_TEMP/sample-app" --name sample-app --${{ matrix.infra }} --yes
+      - run: node dist/index.js "$RUNNER_TEMP/sample-app" --name sample-app --yes
       - working-directory: ${{ runner.temp }}/sample-app
         run: |
           pnpm lint

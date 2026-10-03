@@ -15,21 +15,21 @@ create-vite と同じく、ひな形の中身を `template/` に置き、CLI が
 
 - プロジェクト名は `myapp`(scope・コンテナ名・パス)/ `MyApp`(CDK のスタック名)/ `MYAPP`(環境変数の接頭辞)の
   3 つの表記だけで書く。CLI が 1 回の走査で置き換えるので、他の表記(`my-app`、`my_app`)を作らない
-- `<!-- template:start -->` 〜 `<!-- template:end -->`(YAML では `# template:start` 〜 `# template:end`)は、作ったプロジェクトから中身ごと消える
-- `<!-- infra:start -->` 〜 `<!-- infra:end -->`(同 `# infra:start` 〜 `# infra:end`)は、インフラを含めない場合に中身ごと消える。
-  印は 1 行に単独で書く。コードブロックと表の中には書けないので、消し分けたい内容は箇条書きか段落にする
-- ひな形を変えたら、`pnpm build && node dist/index.js <dir> --name sample-app --yes`(インフラを含めない形も `--no-infra` で)で実際に作り、
+- `<!-- template:start -->` 〜 `<!-- template:end -->`(YAML では `# template:start` 〜 `# template:end`)は、作ったプロジェクトから中身ごと消える。
+  印は 1 行に単独で書く。コードブロックと表の中には書けないので、消したい内容は箇条書きか段落にする
+- `apps/infra`(AWS CDK)は常に含める。含めるかどうかの分岐は作らない
+- ひな形を変えたら、`pnpm compile && node dist/index.js <dir> --name sample-app --yes` で実際に作り、
   作ったプロジェクトで lint・typecheck・depcruise・テストが通ることを確かめる
 
 ## コマンド
 
 ```bash
 pnpm install                  # CLI の依存
-pnpm --dir template install   # ひな形の依存。CLI の lint にも要る。git のフックもここで登録される
-pnpm build                    # tsc と、dist/dotfiles.json の書き出し
-pnpm lint                     # ESLint(ひな形の共有設定。--fix 付き)
+pnpm --dir template install   # ひな形の依存。git のフックもここで登録される
+pnpm compile                  # tsc と、dist/dotfiles.json の書き出し(dist はコミットする)
+pnpm lint                     # ESLint(--fix 付き)
 pnpm typecheck
-pnpm test                     # node:test(text.ts の純関数)
+pnpm test                     # vitest(text.ts の純関数)
 pnpm test:cov                 # カバレッジ付き(text.ts は 100% を要求する)
 ```
 
@@ -37,14 +37,17 @@ pnpm test:cov                 # カバレッジ付き(text.ts は 100% を要求
 
 ## 前提(知らないと踏む)
 
-- `npx github:` は clone したリポジトリで devDependencies まで入れてから `prepare` でビルドする。起動を遅くしないよう、
-  CLI の devDependencies は `typescript` と `@types/node` だけにしている。テストは `node:test`、lint はひな形の
-  `template/packages/eslint-config` に入っている eslint とプラグインを使う(ルートに足さない)
+- `dist/` はコミットする。`npx github:` は `prepare` があると devDependencies まで入れてビルドするので、`prepare` を書かず、
+  ビルド済みの `dist/` をそのまま動かす(実行時の依存だけが入る)。ソースか `template/` の `.gitignore`・`.npmrc` を変えたら
+  `pnpm compile` し直す(コミット時に lefthook が作り直して載せ、CI が差分の無いことを見る)
+- ルートの `package.json` に `prepare`・`build`・`install` 系・`prepack` のスクリプトを書かない。npm は git の依存にこれらが
+  あると、clone 先で devDependencies まで入れる(`build` があるだけで npx が約 2 秒から約 22 秒になった)。ビルドは `compile` と呼ぶ
+- CLI はひな形(`template/`)のファイルを読まずにビルド・lint する。ESLint の規則は `template/packages/eslint-config/index.mjs` の
+  写しを `eslint.shared.mjs` に持ち、tsconfig も自分で持つ。ひな形の共有設定を変えたら写しも合わせる
 - npm は `.gitignore` と `.npmrc` をパッケージに入れない。ビルド時に `template/` の中のそれらを `dist/dotfiles.json` に
   書き出し、npm から取得したときだけ CLI が戻す。git で clone したリポジトリから動かすときは `git ls-files` で写す
   (開発中の `node_modules` や `.env` を写さないため)
 - ルートの `package.json` に `packageManager`・`devEngines` を書かない。`npx` の install が利用者の Node・pnpm のバージョンで止まる
-- `src/` の相対 import は拡張子 `.ts` で書く(`node:test` が型を剥がして直接動かすため。`tsc` が `.js` に書き換える)
 - git のフックはルートの `lefthook.yml`。lefthook は git のルートの設定しか読まないので、`template/lefthook.yml` は
   作ったプロジェクトでだけ効く。ひな形の検査を変えたら両方を合わせる
 

@@ -18,11 +18,11 @@ import {
   applyTemplate,
   copyTemplate,
   isUsableDirectory,
-} from './template.ts'
+} from './template.js'
 import {
   suggestProjectName,
   validateProjectName,
-} from './text.ts'
+} from './text.js'
 
 const DEFAULT_DIRECTORY = 'my-app'
 
@@ -30,10 +30,9 @@ const HELP = `使い方: npx github:tmprar/ts-template [ディレクトリ] [オ
 
 オプション:
   --name <name>       プロジェクト名(英小文字・数字・ハイフン。既定はディレクトリ名から作る)
-  --infra, --no-infra AWS CDK のパッケージ(apps/infra。空のスタックだけ)を含めるか
   --git, --no-git     git リポジトリを初期化するか
   --install, --no-install
-                      依存をインストールするか(git の初期化が必要)
+                      依存をインストールし、コードを整えるか(pnpm install と pnpm lint。git の初期化が必要)
   -y, --yes           聞かれていない項目は既定値で進める
   -h, --help          この説明を表示する
 `
@@ -41,12 +40,11 @@ const HELP = `使い方: npx github:tmprar/ts-template [ディレクトリ] [オ
 /**
 mri が解析結果に入れるキー(別名を含む)。これ以外は知らないオプションとして止める
 */
-const KNOWN_FLAGS = new Set(['git', 'h', 'help', 'infra', 'install', 'name', 'y', 'yes'])
+const KNOWN_FLAGS = new Set(['git', 'h', 'help', 'install', 'name', 'y', 'yes'])
 
 type Answers = {
   directory: string
   git: boolean
-  infra: boolean
   install: boolean
   name: string
 }
@@ -54,7 +52,6 @@ type Answers = {
 type Flags = {
   git?: boolean
   help?: boolean
-  infra?: boolean
   install?: boolean
   name?: string
   yes?: boolean
@@ -69,7 +66,7 @@ export async function runCli(argv: string[]): Promise<number> {
       h: 'help',
       y: 'yes',
     },
-    boolean: ['git', 'help', 'infra', 'install', 'yes'],
+    boolean: ['git', 'help', 'install', 'yes'],
     string: ['name'],
   })
   const unknownFlags = Object.keys(flags).filter(key => key !== '_' && !KNOWN_FLAGS.has(key))
@@ -92,7 +89,6 @@ export async function runCli(argv: string[]): Promise<number> {
   const answers = await askAnswers({
     directory: flags._[0],
     git: flags.git,
-    infra: flags.infra,
     install: flags.install,
     name: flags.name,
     yes: flags.yes === true,
@@ -112,10 +108,7 @@ export async function runCli(argv: string[]): Promise<number> {
   try {
     await copyTemplate(directory)
     progress.message('プロジェクトに合わせて書き換えています')
-    await applyTemplate(directory, {
-      infra: answers.infra,
-      name: answers.name,
-    })
+    await applyTemplate(directory, answers.name)
     await copyFile(path.join(directory, '.env.example'), path.join(directory, '.env'))
     progress.stop('ひな形を用意しました')
   } catch (error) {
@@ -135,7 +128,19 @@ export async function runCli(argv: string[]): Promise<number> {
     log.step('依存をインストールしています(pnpm install)')
 
     if (await runCommand('pnpm', ['install'], directory) !== 0) {
-      log.warn('依存のインストールに失敗しました。pnpm が使えるか確かめ、あとで `pnpm install` を実行してください')
+      log.warn('依存のインストールに失敗しました。pnpm が使えるか確かめ、あとで `pnpm install` と `pnpm lint` を実行してください')
+
+      return 1
+    }
+
+    /*
+      import の並びはパッケージ名で決まるので、`@myapp` を置き換えると規約から外れるファイルが出る。
+      最初のコミットに整形の差分が混ざらないよう、ここで直しておく
+    */
+    log.step('プロジェクト名に合わせてコードを整えています(pnpm lint)')
+
+    if (await runCommand('pnpm', ['lint'], directory) !== 0) {
+      log.warn('lint で直せない指摘が残りました。`pnpm lint` の出力を確かめてください')
 
       return 1
     }
@@ -153,7 +158,6 @@ export async function runCli(argv: string[]): Promise<number> {
 async function askAnswers(given: {
   directory: string | undefined
   git: boolean | undefined
-  infra: boolean | undefined
   install: boolean | undefined
   name: string | undefined
   yes: boolean
@@ -189,14 +193,6 @@ async function askAnswers(given: {
     return undefined
   }
 
-  const infra = given.infra ?? (given.yes || await confirm({
-    message: 'AWS CDK のパッケージ(apps/infra。空のスタックだけ)を含めますか?',
-  }))
-
-  if (isCancel(infra)) {
-    return undefined
-  }
-
   const git = given.git ?? (given.yes || await confirm({
     message: 'git リポジトリを初期化しますか?',
   }))
@@ -210,7 +206,7 @@ async function askAnswers(given: {
     初期化しないなら尋ねない
   */
   const install = git && (given.install ?? (given.yes || await confirm({
-    message: '依存をインストールしますか?(pnpm install)',
+    message: '依存をインストールし、コードを整えますか?(pnpm install と pnpm lint)',
   })))
 
   if (isCancel(install)) {
@@ -220,7 +216,6 @@ async function askAnswers(given: {
   return {
     directory,
     git,
-    infra,
     install,
     name,
   }
@@ -263,7 +258,7 @@ function composeNextSteps(answers: Answers): string {
   return [
     `cd ${/\s/.test(answers.directory) ? `"${answers.directory}"` : answers.directory}`,
     ...(answers.git ? [] : ['git init']),
-    ...(answers.install ? [] : ['pnpm install']),
+    ...(answers.install ? [] : ['pnpm install', 'pnpm lint']),
     'pnpm dev',
   ].join('\n')
 }

@@ -1,13 +1,25 @@
 {
-  "extends": "./template/packages/typescript-config/lib.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2023",
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": false,
-    "declarationMap": false,
-    "erasableSyntaxOnly": true,
-    "rewriteRelativeImportExtensions": true,
-    "types": ["node"]
+    "types": ["node"],
+    "strict": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

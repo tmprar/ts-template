@@ -15,19 +15,28 @@
     "template"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node dist/bundle-dotfiles.js",
-    "prepare": "npm run build",
-    "lint": "template/packages/eslint-config/node_modules/.bin/eslint src --fix",
+    "compile": "tsc -p tsconfig.build.json && node dist/bundle-dotfiles.js",
+    "lint": "eslint \"src/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test \"src/**/*.spec.ts\"",
-    "test:cov": "node --test --experimental-test-coverage --test-coverage-include=src/text.ts --test-coverage-branches=100 --test-coverage-functions=100 --test-coverage-lines=100 \"src/**/*.spec.ts\""
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
   },
   "dependencies": {
     "@clack/prompts": "~1.8.1",
     "mri": "~1.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "~10.0.1",
+    "@stylistic/eslint-plugin": "~5.10.0",
     "@types/node": "~24.13.4",
-    "typescript": "~6.0.3"
+    "@vitest/coverage-v8": "~4.1.11",
+    "eslint": "~10.10.0",
+    "eslint-plugin-import-newlines": "~2.0.0",
+    "eslint-plugin-perfectionist": "~5.11.0",
+    "eslint-plugin-unicorn": "~74.0.0",
+    "globals": "~17.12.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "~8.70.0",
+    "vitest": "~4.1.11"
   }
 }

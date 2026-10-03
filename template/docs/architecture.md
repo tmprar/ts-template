@@ -93,9 +93,7 @@ flowchart LR
 - DB マイグレーションはデプロイ手順に組み込み、expand-contract 方式で後方互換を保つ(`node dist/scripts/migrate`)
 - API は TLS を終端するプロキシの後ろで動かし、web と同一オリジンで配信する(プロキシが `/api/*` だけを API に流す)。`/api/docs` と `/api/openapi.json` は開発者向けのため本番では配信しない
 - 配備先と配備の手順はプロジェクトごとに決める。ひな形が持つのは API の本番イメージ(`apps/api/Dockerfile`)まで
-<!-- infra:start -->
 - AWS に配備する場合のリソースは `apps/infra` の CDK に書く。ひな形の時点では空のスタック(`lib/stacks/app-stack.ts`)だけ
-<!-- infra:end -->
 
 ## 7. 技術選定
 
