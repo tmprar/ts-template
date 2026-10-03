@@ -12,14 +12,15 @@ import {
 
 import { NotifyCompletedTodoQueue } from '#app/modules/todo/job/notify-completed-todo.queue.js'
 import {
+  buildCompletedTodoMail,
   Todo,
-  TODO_GATEWAY,
   TODO_REPOSITORY,
-  type TodoGateway,
   type TodoRepository,
   type TodoStatus,
 } from '#app/modules/todo/todo.domain.js'
 import { TodoQuery } from '#app/modules/todo/todo.query.js'
+import { AppConfigService } from '#app/platform/config/index.js'
+import { MailService } from '#app/platform/mail/index.js'
 
 /**
 todoを完了にできなかった理由
@@ -68,9 +69,10 @@ export type TodoDto = {
 export class TodoUsecase {
   constructor(
     @Inject(TODO_REPOSITORY) private readonly repository: TodoRepository,
-    @Inject(TODO_GATEWAY) private readonly gateway: TodoGateway,
     private readonly query: TodoQuery,
     private readonly notifyCompletedTodoQueue: NotifyCompletedTodoQueue,
+    private readonly config: AppConfigService,
+    private readonly mail: MailService,
   ) {}
 
   /**
@@ -166,9 +168,10 @@ export class TodoUsecase {
   }
 
   /**
-   * todoの完了を知らせる(ジョブから呼ばれる)。
+   * todoの完了をメールで知らせる(ジョブから呼ばれる)。
+   * 件名と本文はdomainが組み立て、送信だけを送信基盤(platform/mail)へ頼む。
    *
-   * 通知までにtodoが削除されたときは、何もせず成功として終える。
+   * 通知までにtodoが削除されたときと、宛先が未設定のときは、何もせず成功として終える。
    * リトライで同じ通知が2回届くことはありうる(重複を許せないなら、
    * 送った日時を保存して送る前に確かめる)。
    *
@@ -184,6 +187,18 @@ export class TodoUsecase {
       return ok(undefined)
     }
 
-    return await this.gateway.notifyCompletedTodo(todo)
+    const to = this.config.get('TODO_NOTICE_MAIL_TO', { infer: true })
+
+    if (to === undefined) {
+      return ok(undefined)
+    }
+
+    const sent = await this.mail.send(to, buildCompletedTodoMail(todo))
+
+    // 送信基盤の失敗を、このusecaseの失敗の型へ写して返す(原因は `cause` で運ぶ)
+    return sent.mapErr((failure): NotifyCompletedTodoError => ({
+      cause: failure.cause,
+      type: 'NoticeUnavailable',
+    }))
   }
 }

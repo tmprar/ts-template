@@ -58,7 +58,8 @@ todo/
   todo.usecase.ts
   todo.query.ts
   drizzle-todo.repository.ts
-  mail-todo.gateway.ts
+  assets/
+    completed-todo-mail.eta
   job/
     notify-completed-todo.queue.ts
     notify-completed-todo.worker.ts
@@ -74,13 +75,17 @@ todo/
   Facade の内部でインラインに書く
 - Usecase の I/F は DTO。DTO は Usecase 内に定義する。Repository や Gateway、QueryService を呼ぶ。
   Repository を呼び出すときは、Entity の create メソッドを呼び出して Entity にして渡す。
-  戻り値の DTO への整形は、Usecase の内部でインラインに書く。Repository と Gateway は interface で DI する
+  戻り値の DTO への整形は、Usecase の内部でインラインに書く。Repository と Gateway は interface で DI する。
+  技術基盤(`platform/`)のサービスは interface を挟まずに直接呼ぶ(メールの送信は `MailService`)
 - QueryService の I/F は DTO。DTO は QueryService 内に定義する
 - Repository の I/F は Domain から interface を import して implements する。Entity は Domain に定義し、
   データベースから受け取った値を Entity の from メソッドを呼び出して、Entity にして返す
-- Gateway の I/F は Domain から interface を import して implements する。外部サービスとのやり取りを行う
-- Repository・Gateway の実装クラスは、interface の名前の前に実装の手段を付け(`DrizzleTodoRepository`・`MailTodoGateway`)、
-  ファイル名をクラス名に合わせる(`drizzle-todo.repository.ts`・`mail-todo.gateway.ts`)
+- Gateway の I/F は Domain から interface を import して implements する。外部サービスとのやり取りを行う。
+  サンプルの `todo` には無い(メールの送信は Gateway を作らず、Usecase が `MailService` を呼ぶ)
+- メールの件名と本文は、Domain の build 関数で組み立てる(`buildCompletedTodoMail`)。本文は eta のテンプレートにして、
+  モジュールの `assets/` に置く(`assets/completed-todo-mail.eta`)。Usecase は build 関数の戻り値を `MailService` に渡す
+- Repository・Gateway の実装クラスは、interface の名前の前に実装の手段を付け(`DrizzleTodoRepository`・`SlackTodoGateway`)、
+  ファイル名をクラス名に合わせる(`drizzle-todo.repository.ts`・`slack-todo.gateway.ts`)
 - 同じ役割のファイルが 1 つのうちはモジュール直下に置き、複数になったら役割の名前のディレクトリにまとめる
   (`repository/drizzle-todo.repository.ts`・`repository/drizzle-todo-comment.repository.ts`)。
   controller・usecase・query・repository・gateway など、どの役割も同じ

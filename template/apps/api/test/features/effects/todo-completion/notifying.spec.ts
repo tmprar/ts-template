@@ -24,7 +24,7 @@ describe('todoの完了をメールで知らせる', () => {
       await completeTodo(ctx, todo.id).expect(200)
 
       expect(await findSentMails(ctx)).toEqual([{
-        body: '「牛乳を買う」を完了にしました。',
+        body: '「牛乳を買う」を完了にしました。\n',
         subject: '【完了】牛乳を買う',
         to: NOTICE_MAIL_TO,
       }])

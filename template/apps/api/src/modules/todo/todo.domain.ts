@@ -1,13 +1,15 @@
 import type { Result } from 'neverthrow'
 
+import { Eta } from 'eta'
 import {
   err,
   ok,
 } from 'neverthrow'
 import { randomUUID } from 'node:crypto'
+import path from 'node:path'
 
 /**
- * todoのドメイン。Entityと、Repository・Gatewayのinterfaceを定義する。
+ * todoのドメイン。Entityと、Repositoryのinterface、メールの件名・本文の組み立てを定義する。
  * Nest・ORM・contracts・外部APIに依存しない
  */
 
@@ -16,14 +18,6 @@ todoの完了の失敗
 */
 export type CompleteTodoError = {
   type: 'AlreadyCompleted'
-}
-
-/**
-todoの完了の通知の失敗。`cause` は翻訳前の原因で、ログに出すためだけに運ぶ
-*/
-export type NotifyCompletedTodoError = {
-  cause?: unknown
-  type: 'NoticeUnavailable'
 }
 
 /**
@@ -121,11 +115,28 @@ export interface TodoRepository {
   updateTodo(todo: Todo): Promise<void>
 }
 
-export const TODO_GATEWAY = Symbol('TodoGateway')
+/**
+メールの本文のテンプレート(eta)。モジュールの assets/ に置く。
+平文で送るので、HTMLのエスケープはしない
+*/
+const eta = new Eta({
+  autoEscape: false,
+  views: path.join(import.meta.dirname, 'assets'),
+})
 
 /**
- * todoについて外部へ出す連絡
- */
-export interface TodoGateway {
-  notifyCompletedTodo(todo: Todo): Promise<Result<undefined, NotifyCompletedTodoError>>
+todoの完了を知らせるメール
+*/
+export type CompletedTodoMail = {
+  body: string
+  subject: string
 }
+
+/**
+ * todoの完了を知らせるメールの件名と本文を組み立てる。
+ * 本文は assets/completed-todo-mail.eta から作る
+ */
+export const buildCompletedTodoMail = (todo: Todo): CompletedTodoMail => ({
+  body: eta.render('completed-todo-mail', { title: todo.title }),
+  subject: `【完了】${todo.title}`,
+})

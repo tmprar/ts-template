@@ -3,7 +3,10 @@ import {
   ok,
 } from 'neverthrow'
 
-import { Todo } from '#app/modules/todo/todo.domain.js'
+import {
+  buildCompletedTodoMail,
+  Todo,
+} from '#app/modules/todo/todo.domain.js'
 
 const createdAt = new Date('2030-01-15T10:00:00.000Z')
 const now = new Date('2030-01-16T09:00:00.000Z')
@@ -102,5 +105,35 @@ describe('Todo#complete', () => {
     })
 
     expect(doneTodo.complete(now)).toEqual(err({ type: 'AlreadyCompleted' }))
+  })
+})
+
+describe('buildCompletedTodoMail', () => {
+  it('todoの件名を入れた、完了を知らせるメールの件名と本文になる', () => {
+    const doneTodo = Todo.from({
+      completedAt: now,
+      createdAt,
+      id: 'todo-1',
+      title: '牛乳を買う',
+    })
+
+    expect(buildCompletedTodoMail(doneTodo)).toEqual({
+      body: '「牛乳を買う」を完了にしました。\n',
+      subject: '【完了】牛乳を買う',
+    })
+  })
+
+  it('件名の記号は、HTMLのエスケープをせずにそのまま入る', () => {
+    const doneTodo = Todo.from({
+      completedAt: now,
+      createdAt,
+      id: 'todo-1',
+      title: '<A&B>を買う',
+    })
+
+    expect(buildCompletedTodoMail(doneTodo)).toEqual({
+      body: '「<A&B>を買う」を完了にしました。\n',
+      subject: '【完了】<A&B>を買う',
+    })
   })
 })
