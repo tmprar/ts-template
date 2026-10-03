@@ -6,3 +6,6 @@ coverage/
 
 # Playwright MCP の出力(スナップショット・スクリーンショット・コンソールログ)
 .playwright-mcp/
+
+# ビルド結果。main には入れず、release ブランチにだけ CI が載せる(.github/workflows/release.yml)
+dist/

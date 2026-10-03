@@ -1,6 +1,6 @@
 # ts-template
 
-NestJS(API)+ Nuxt(web)のモノレポのひな形と、そこからプロジェクトを作る CLI(`npx github:tmprar/ts-template`)。
+NestJS(API)+ Nuxt(web)のモノレポのひな形と、そこからプロジェクトを作る CLI(`npx github:tmprar/ts-template#release`)。
 create-vite と同じく、ひな形の中身を `template/` に置き、CLI がそれを写して書き換える。
 
 - `template/`: ひな形の中身。作ったプロジェクトにそのまま写る。中の構成・規約・コマンドは `template/CLAUDE.md` が正
@@ -26,7 +26,7 @@ create-vite と同じく、ひな形の中身を `template/` に置き、CLI が
 ```bash
 pnpm install                  # CLI の依存
 pnpm --dir template install   # ひな形の依存。git のフックもここで登録される
-pnpm compile                  # tsc と、dist/dotfiles.json の書き出し(dist はコミットする)
+pnpm compile                  # tsc と、dist/dotfiles.json の書き出し(dist はコミットしない)
 pnpm lint                     # ESLint(--fix 付き)
 pnpm typecheck
 pnpm test                     # vitest(text.ts の純関数)
@@ -37,9 +37,10 @@ pnpm test:cov                 # カバレッジ付き(text.ts は 100% を要求
 
 ## 前提(知らないと踏む)
 
-- `dist/` はコミットする。`npx github:` は `prepare` があると devDependencies まで入れてビルドするので、`prepare` を書かず、
-  ビルド済みの `dist/` をそのまま動かす(実行時の依存だけが入る)。ソースか `template/` の `.gitignore`・`.npmrc` を変えたら
-  `pnpm compile` し直す(コミット時に lefthook が作り直して載せ、CI が差分の無いことを見る)
+- `dist/` は main にコミットしない。main に入ると `.github/workflows/release.yml` が `pnpm compile` し、main の中身に `dist/` を
+  加えたコミットを `release` ブランチに積む(`scripts/publish-release.sh`。前回の release を親にするので force push しない)。
+  利用者はビルドせずに `#release` を動かす。`release` ブランチを手で触らない
+- `bin/create-ts-template.js` は素の JS(ビルドしない入口)。`dist/` が無ければ `#release` の付け忘れとして案内する
 - ルートの `package.json` に `prepare`・`build`・`install` 系・`prepack` のスクリプトを書かない。npm は git の依存にこれらが
   あると、clone 先で devDependencies まで入れる(`build` があるだけで npx が約 2 秒から約 22 秒になった)。ビルドは `compile` と呼ぶ
 - CLI はひな形(`template/`)のファイルを読まずにビルド・lint する。ESLint の規則は `template/packages/eslint-config/index.mjs` の

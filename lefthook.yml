@@ -14,17 +14,6 @@ pre-commit:
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
-    # dist はコミットする(npx でビルドせずに動かすため)。ソースか、dist/dotfiles.json に写すドットファイルが変わったら作り直して載せる
-    - name: build-cli
-      glob:
-        - 'src/*.ts'
-        - 'src/**/*.ts'
-        - 'template/.gitignore'
-        - 'template/**/.gitignore'
-        - 'template/.npmrc'
-        - 'template/**/.npmrc'
-      run: pnpm compile && git add dist
-
     - name: typecheck-cli
       glob: ['src/*.ts', 'src/**/*.ts']
       run: pnpm typecheck

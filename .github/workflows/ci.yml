@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  # CLI の静的検査と単体テスト。dist はコミットしているので、ソースから作り直して差分が無いことも見る
+  # CLI の静的検査と単体テスト
   cli:
     runs-on: ubuntu-24.04
     steps:
@@ -34,15 +34,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:cov
       - run: pnpm compile
-      - name: dist がソースと一致しているか
-        run: |
-          if [ -n "$(git status --porcelain -- dist)" ]; then
-            git status --short -- dist
-            echo "dist が古い。pnpm compile を実行してコミットする"
-            exit 1
-          fi
 
-  # コミットされた dist の CLI でプロジェクトを作り、そのプロジェクトで検査する
+  # CLI でプロジェクトを作り、そのプロジェクトで検査する
   generated:
     runs-on: ubuntu-24.04
     steps:
@@ -58,8 +51,8 @@ jobs:
           cache-dependency-path: |
             pnpm-lock.yaml
             template/pnpm-lock.yaml
-      # CLI の実行時の依存(@clack/prompts と mri)だけ入れる
-      - run: pnpm install --frozen-lockfile --prod
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm compile
       # 名前はハイフン入りにして、各表記(kebab / Pascal / UPPER_SNAKE)への置き換えを通す
       - run: node dist/index.js "$RUNNER_TEMP/sample-app" --name sample-app --yes
       - working-directory: ${{ runner.temp }}/sample-app

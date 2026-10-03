@@ -26,7 +26,7 @@ import {
 
 const DEFAULT_DIRECTORY = 'my-app'
 
-const HELP = `使い方: npx github:tmprar/ts-template [ディレクトリ] [オプション]
+const HELP = `使い方: npx github:tmprar/ts-template#release [ディレクトリ] [オプション]
 
 オプション:
   --name <name>       プロジェクト名(英小文字・数字・ハイフン。既定はディレクトリ名から作る)
