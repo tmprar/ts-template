@@ -1,61 +1,91 @@
 # ts-template
 
-NestJS(API)+ Nuxt(web)を pnpm workspace + Turborepo でまとめたモノレポのひな形と、そこからプロジェクトを作る CLI。
-作ったプロジェクトには、構成を示すサンプルとして `todo` モジュール(API)とその画面(web)と、
-AWS CDK の空のスタック(`apps/infra`)が入る。
+NestJS(API)と Nuxt(web)を pnpm workspace と Turborepo で構成したモノレポのテンプレートと、そのテンプレートからプロジェクトを作成する CLI。
+作成したプロジェクトには、構成の例として `todo` モジュール(API)とその画面(web)、AWS CDK の空のスタック(`apps/infra`)が含まれる。
 
-## プロジェクトを作る
+## プロジェクトを作成する
 
 ```bash
 npx 'github:tmprar/ts-template#release'
 ```
 
-GitHub からこのリポジトリの `release` ブランチ(ビルド済みの CLI が入っている)を取得して CLI を起動し、次を尋ねる。答え終わると、ひな形を写して書き換え、
-`.env` を `.env.example` から作り、git の初期化、依存のインストール、`pnpm lint` による整形まで済ませる
-(そのまま最初のコミットができる)。
+このコマンドを実行すると、npx が GitHub からこのリポジトリの `release` ブランチ(ビルド済みの CLI を含む)を取得し、CLI を起動する。
+CLI は次の 4 項目を対話形式で順に質問する。
 
-| 質問 | 内容 |
-| --- | --- |
-| ディレクトリ | 作る先。空か、まだ無いディレクトリ |
-| プロジェクト名 | 英小文字・数字・ハイフン。既定はディレクトリ名から作る。パッケージの scope(`@my-app/api`)・DB 名・CDK のスタック名(`MyAppProd`)になる |
-| git リポジトリを初期化するか | `git init --initial-branch main` |
-| 依存をインストールするか | `pnpm install` と `pnpm lint`(lefthook が git のフックを登録するため、リポジトリの初期化が要る)。import の並びはパッケージ名で決まるので、名前を置き換えた後に整える |
+| 質問                               | 内容                                                                                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 作成先のディレクトリ               | 空のディレクトリか、まだ存在しないパスを指定する                                                                                                      |
+| プロジェクト名                     | 英小文字・数字・ハイフンが使える。既定値はディレクトリ名から決まる。パッケージの scope(`@my-app/api`)、DB 名、CDK のスタック名(`MyAppProd`)に使われる |
+| git リポジトリを初期化するか       | 「はい」なら `git init --initial-branch main` を実行する                                                                                              |
+| 依存パッケージをインストールするか | 「はい」なら `pnpm install` と `pnpm lint` を実行する。git リポジトリを初期化しない場合、この質問は省略され、どちらも実行されない                     |
 
-引数で答えておくこともできる(`npx 'github:tmprar/ts-template#release' --help`)。
+回答が終わると、CLI はテンプレートをコピーしてプロジェクトのセットアップを行う。
+
+各項目はコマンドライン引数でも指定できる。引数で指定した項目は質問されない。
+オプションの一覧は `npx 'github:tmprar/ts-template#release' --help` で確認できる。
 
 ```bash
-npx 'github:tmprar/ts-template#release' my-app --name my-app --yes   # 残りは既定値(すべて「はい」)で進める
+# 指定していない項目は全て「はい」とし、プロジェクト名をmy-appとする例
+npx 'github:tmprar/ts-template#release' my-app --name my-app --yes
 ```
 
-Node.js 22 以上が要る。作ったプロジェクトの開発には、さらに pnpm と Docker が要る(バージョンはそのプロジェクトの README)。
+CLI の実行には Node.js 22 以上が必要である。
+作成したプロジェクトの開発には、加えて pnpm と Docker が必要になる(必要なバージョンは、作成したプロジェクトの README に記載している)。
 
-## 構成
+## リポジトリの構成
 
-- `template/`: ひな形の中身。作ったプロジェクトにそのまま写る。中の構成と規約は `template/README.md`・`template/CLAUDE.md`
-- `src/`: CLI(`create-ts-template`)。対話は `@clack/prompts`、引数の解析は `mri`
-- `bin/create-ts-template.js`: CLI の入口。`dist/` が無い(main を取得した)ときは `#release` を付けるよう案内して止める
-- `.github/workflows/ci.yml`: PR の CI。CLI の検査と、CLI で作ったプロジェクトの検査
-- `.github/workflows/release.yml`: main に入ったら、ビルドした `dist/` を載せたコミットを `release` ブランチに積む
+- `template/`: テンプレートの本体。作成したプロジェクトにそのままコピーされる。テンプレートの構成と規約は `template/README.md` と `template/CLAUDE.md` に記載している
+- `src/`: CLI(`create-ts-template`)のソース。対話には `@clack/prompts`、引数の解析には `mri` を使う
+- `bin/create-ts-template.js`: CLI のエントリポイント。`dist/` が無い場合(main ブランチを取得した場合)は、`#release` を付けて実行するよう表示して終了する
+- `.github/workflows/ci.yml`: PR に対する CI。CLI 自体の検査と、CLI で作成したプロジェクトの検査を行う
+- `.github/workflows/release.yml`: main にマージされると、ビルドした `dist/` を加えたコミットを `release` ブランチに追加する
   (`scripts/publish-release.sh`)
 
-`npx github:` は、リポジトリを clone して `package.json` の `files`(`bin`・`dist`・`template`)をパッケージに詰め、
-実行時の依存(`@clack/prompts` と `mri`)だけを入れて動かす。ビルドはしないので、ビルド済みの `dist/` が要る。
-main には `dist/` を入れず、CI が `release` ブランチにだけ載せる。
-npm は `.gitignore` と `.npmrc` をパッケージに入れないので、ビルド時にその中身を `dist/dotfiles.json` に書き出し、
-CLI がプロジェクトを作るときに戻す。
+## `release` ブランチから配布する理由
 
-`release` ブランチは CI だけが更新する。GitHub の branch protection(または ruleset)で、人の push を禁じておく。
+`npx github:` は、リポジトリを clone し、`package.json` の `files` に列挙したもの(`bin`・`dist`・`template`)をパッケージにまとめ、
+実行時の依存パッケージ(`@clack/prompts` と `mri`)だけをインストールして実行する。
+`package.json` に `prepare` や `build` などのスクリプトがあれば、npx は clone 先で devDependencies もインストールしてビルドする。
 
-## ひな形を保守する
+しかし、取得時のビルドには 2 つの問題がある。
+1 つは、起動までの時間が延びることである(`build` スクリプトがあるだけで、キャッシュなしの npx の起動が約 2 秒から約 22 秒になった)。
+もう 1 つは、`pnpm dlx` では取得時にビルドできないことである。
 
-```bash
-pnpm install                    # CLI の依存
-pnpm --dir template install     # ひな形の依存。git のフックもここで登録される
-pnpm compile                    # CLI をビルドする(dist/。コミットはしない)
-node dist/index.js ../sample-app --name sample-app --yes   # 実際に作って確かめる
+そこで、取得時にビルドせず、ビルド済みの `dist/` を取得するブランチに含めておくことにした。
+そして、`dist/`を用意することを CI が行うことで、常に適切な `dist/` が提供されるようにしている。
+
+npm は、パッケージをまとめるときに `.gitignore` と `.npmrc` を除外する。
+そのため、ビルド時に `template/` 内のこれらのファイルの内容を `dist/dotfiles.json` に書き出しておく。
+npx で取得した CLI は、プロジェクトの作成時にこのファイルから両者を復元する。
+
+## 開発
+
+- CLI の検査には `pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm test:cov` を使う
+- テンプレートの中で開発するときは、`template/` に移動し、`template/README.md` に記載したコマンドを実行する
+
+### CLI がテンプレートを書き換える規則
+
+CLI は、テンプレートをコピーするときに次の 2 つの書き換えを行う。テンプレートを編集するときは、この規則に合わせて書く。
+
+1 つめは、プロジェクト名の置き換えである。テンプレートの中では、プロジェクト名を次の 3 つの表記で仮に書いておく。CLI はこれらを、質問で受け取ったプロジェクト名に置き換える。
+
+| テンプレートでの表記 | 使う場所                             | `my-app` と答えた場合 |
+| -------------------- | ------------------------------------ | --------------------- |
+| `myapp`              | パッケージの scope、コンテナ名、パス | `my-app`              |
+| `MyApp`              | CDK のスタック名                     | `MyApp`               |
+| `MYAPP`              | 環境変数の接頭辞                     | `MY_APP`              |
+
+CLI が探すのはこの 3 つの文字列だけなので、`my-app` や `my_app` のような別の表記で書いた箇所は置き換わらない。
+
+2 つめは、作成したプロジェクトには不要な記述の削除である。テンプレートのファイルの中で次の 2 行に挟んだ範囲は、この 2 行も含めて、作成したプロジェクトから削除される。
+
+```markdown
+<!-- template:start -->
+この範囲は、作成したプロジェクトには残らない。
+<!-- template:end -->
 ```
 
-- CLI の検査は `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm test:cov`
-- `dist/` はコミットしない。main に入ると CI が作って `release` ブランチに載せる
-- ひな形の中で開発するときは `template/` に移って、ひな形の README のとおりにコマンドを実行する
-- 書き換えの約束(プレースホルダの表記、`template` の印)は `CLAUDE.md` の「ひな形としての約束」を参照
+YAML のように `#` でコメントを書くファイルでは、`# template:start` と `# template:end` を使う。
+CLI は行全体がこの文字列に一致するかどうかで判定するので、どちらの行にもほかの文字を書かない。
+
+現在のテンプレートには、この 2 行で挟んだ箇所は無い。テンプレートの説明のように、テンプレートにだけ必要な記述を追加するときに使う。
