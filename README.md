@@ -29,7 +29,7 @@ CLI は次の 4 項目を対話形式で順に質問する。
 npx 'github:tmprar/ts-template#release' my-app --name my-app --yes
 ```
 
-CLI の実行には Node.js 22 以上が必要である。
+CLI の実行には Node.js 24 以上が必要である。
 作成したプロジェクトの開発には、加えて pnpm と Docker が必要になる(必要なバージョンは、作成したプロジェクトの README に記載している)。
 
 ## リポジトリの構成

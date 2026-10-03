@@ -49,6 +49,9 @@ pnpm test:cov                 # カバレッジ付き(text.ts は 100% を要求
   書き出し、npm から取得したときだけ CLI が戻す。git で clone したリポジトリから動かすときは `git ls-files` で写す
   (開発中の `node_modules` や `.env` を写さないため)
 - ルートの `package.json` に `packageManager`・`devEngines` を書かない。`npx` の install が利用者の Node・pnpm のバージョンで止まる
+- CI(`ci.yml`・`release.yml`)は、Node・pnpm のバージョンをワークフローに直接書く。`template/package.json` からは読まない。
+  Node は `engines.node` の下限のメジャーに合わせ、`engines` を上げたら CI と README も上げる。作ったプロジェクトの検査では、
+  そのプロジェクトの `packageManager`・`devEngines` を見て pnpm が版を切り替える(利用者の環境と同じ流れ)
 - git のフックはルートの `lefthook.yml`。lefthook は git のルートの設定しか読まないので、`template/lefthook.yml` は
   作ったプロジェクトでだけ効く。テンプレートの検査を変えたら両方を合わせる
 
