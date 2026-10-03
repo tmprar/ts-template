@@ -21,16 +21,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6.1.0
         with:
-          package_json_file: template/package.json
+          version: 12
       - uses: actions/setup-node@v4
         with:
-          node-version-file: template/package.json
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            template/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm compile
       - run: scripts/publish-release.sh

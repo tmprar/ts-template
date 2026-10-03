@@ -14,3 +14,10 @@
 - 理由: import の並びはパッケージ名で決まるため、`@myapp` を置き換えると規約から外れるファイルが出る(`@sample-app/contracts` が `@nestjs/*` より後ろに来る)。最初のコミットに整形の差分を混ぜない
 - 決定: npm がパッケージから落とす `.gitignore` と `.npmrc` は、ビルド時に `dist/dotfiles.json` に書き出して CLI が戻す。create-vite のように `_gitignore` へ改名しない
 - 理由: 改名するとテンプレートの中で開発するときに、入れ子の `.gitignore` と `.npmrc`(レジストリの指定)が効かなくなる
+
+## 2026-10-03 CLI の Node の下限を 24 にし、CLI の CI に版を直接書く
+- 決定: ルートの `package.json` の `engines.node` を `>=22` から `>=24` に上げる
+- 理由: 作ったプロジェクトは Node 24 を要求するので、22 で CLI だけ動いても開発に進めない。22 で動くことは CI でも確かめていなかった
+- 決定: `ci.yml`(`cli`・`generated`)と `release.yml` は、Node(`24`)と pnpm(`12`)をワークフローに直接書く。`template/package.json` からは読まない
+- 理由: CLI の検査がテンプレートのファイルに依存すると、テンプレートの版を上げただけで CLI を検査する版まで変わり、`engines` の約束(下限)を確かめられなくなる。CLI は `packageManager`・`devEngines` を書けない(`npx` が利用者の環境で止まる)ので、書く場所はワークフローになる
+- 理由: `generated` も、利用者と同じく CLI を動かす環境だけを用意する。作ったプロジェクトが要求する版には、そのプロジェクトの `packageManager`・`devEngines`(`onFail: download`)を見て pnpm が切り替えるので、この仕組みが効くことも併せて確かめられる
