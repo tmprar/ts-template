@@ -14,7 +14,7 @@ const NO_THROW = {
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'node_modules/', 'eslint.config.mjs'],
+    ignores: ['dist/', '.out/', 'node_modules/', 'coverage/', 'eslint.config.mjs', '.dependency-cruiser.mjs'],
   },
   ...sharedConfig.configs['recommended'],
   ...sharedConfig.configs['recommended/ts'],

@@ -27,7 +27,7 @@
     "generate:openapi": "node dist/scripts/generate-openapi",
     "db": "drizzle-kit",
     "depcruise": "depcruise src",
-    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "lint": "eslint . --fix",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",

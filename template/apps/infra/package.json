@@ -6,7 +6,7 @@
   "scripts": {
     "cdk": "cdk",
     "synth": "cdk synth --quiet",
-    "lint": "eslint \"{bin,lib}/**/*.ts\" --fix",
+    "lint": "eslint . --fix",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
