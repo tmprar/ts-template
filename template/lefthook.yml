@@ -15,19 +15,25 @@ pre-commit:
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
-    - name: lint-web
-      root: apps/web/
-      glob: 'apps/web/{app,shared,server}/**/*.{ts,vue}'
-      run: pnpm exec eslint {staged_files} --fix
-      stage_fixed: true
-
     - name: depcruise
       glob: 'apps/api/{src,test}/**/*.ts'
       run: pnpm turbo depcruise
 
-    - name: typecheck
-      glob: '**/*.{ts,vue}'
-      run: pnpm turbo typecheck
+    # lint-web と typecheck は並行させず、順に実行する。typecheck が実行する nuxt prepare が
+    # apps/web/.nuxt/eslint.config.mjs を書き換え、その途中で lint-web の ESLint がこのファイルを読むと、
+    # 自動 import の名前の定義が無く、ref・useHead などが no-undef として報告されるためである
+    - group:
+        parallel: false
+        jobs:
+          - name: lint-web
+            root: apps/web/
+            glob: 'apps/web/{app,shared,server}/**/*.{ts,vue}'
+            run: pnpm exec eslint {staged_files} --fix
+            stage_fixed: true
+
+          - name: typecheck
+            glob: '**/*.{ts,vue}'
+            run: pnpm turbo typecheck
 
 commit-msg:
   jobs:

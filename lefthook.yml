@@ -30,21 +30,25 @@ pre-commit:
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
-    - name: lint-web
-      root: template/apps/web/
-      glob: 'template/apps/web/{app,shared,server}/**/*.{ts,vue}'
-      run: pnpm exec eslint {staged_files} --fix
-      stage_fixed: true
-
     - name: depcruise
       root: template/
       glob: 'template/apps/api/{src,test}/**/*.ts'
       run: pnpm turbo depcruise
 
-    - name: typecheck
-      root: template/
-      glob: 'template/**/*.{ts,vue}'
-      run: pnpm turbo typecheck
+    # lint-web と typecheck は順に実行する(理由は template/lefthook.yml)
+    - group:
+        parallel: false
+        jobs:
+          - name: lint-web
+            root: template/apps/web/
+            glob: 'template/apps/web/{app,shared,server}/**/*.{ts,vue}'
+            run: pnpm exec eslint {staged_files} --fix
+            stage_fixed: true
+
+          - name: typecheck
+            root: template/
+            glob: 'template/**/*.{ts,vue}'
+            run: pnpm turbo typecheck
 
 commit-msg:
   jobs:
