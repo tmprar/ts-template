@@ -49,6 +49,9 @@ reports/
 # dotenvx が .env を復号する秘密鍵
 .env.keys
 
+# Claude Code の開発者ごとの設定
+.claude/settings.local.json
+
 # temp directory
 .temp
 .tmp

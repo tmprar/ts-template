@@ -37,7 +37,7 @@ jobs:
       text: ${{ steps.filter.outputs.text }}
       text-files: ${{ steps.filter.outputs.text_files }}
       text-config: ${{ steps.filter.outputs.text-config }}
-      diff-coverage-scripts: ${{ steps.filter.outputs.diff-coverage-scripts }}
+      review-scripts: ${{ steps.filter.outputs.review-scripts }}
       adr: ${{ steps.filter.outputs.adr }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -81,7 +81,8 @@ jobs:
               - '.adr-dir'
               - '.github/workflows/ci.yml'
               - '.github/actions/install-adrs/**'
-            diff-coverage-scripts:
+            review-scripts:
+              - '.github/scripts/claude-review/**'
               - '.github/scripts/diff-coverage/**'
               - '.github/workflows/ci.yml'
             # 検査しないファイルは .textlintignore に書き、textlint が無視する
@@ -273,10 +274,11 @@ jobs:
       # 空の節は warning で、既定では終了コードが 0 になるため、warning でも失敗させる
       - run: adrs doctor --warnings-as-errors
 
-  # 差分のカバレッジのスクリプトの単体テスト(node:test)
-  test-diff-coverage-scripts:
+  # CI の補助のスクリプト(Claude のレビューの投稿、差分のカバレッジ)の単体テスト。
+  # スクリプトはどのパッケージにも属さず、依存も無いため、pnpm install をせずに Node の組み込みのテストランナーで実行する
+  test-review-scripts:
     needs: [changes]
-    if: needs.changes.outputs.diff-coverage-scripts == 'true'
+    if: needs.changes.outputs.review-scripts == 'true'
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -284,4 +286,4 @@ jobs:
         with:
           cache: false
           install: false
-      - run: node --test '.github/scripts/diff-coverage/*.test.mjs'
+      - run: node --test '.github/scripts/claude-review/*.test.mjs' '.github/scripts/diff-coverage/*.test.mjs'

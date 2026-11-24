@@ -25,6 +25,10 @@ pnpm dev             # 開発に必要なコンテナを立ち上げた後、開
 
 ADR(`docs/adr/`)を作成・変更するには、[adrs](https://github.com/joshrotenberg/adrs) の CLI をインストールしておく。入っていないと、ADR を含むコミットで lefthook の検査が失敗する。
 
+Claude Code で作業するときは、`jq` と Claude Code の CLI(`claude`)をインストールしておく。`.claude/settings.json` のフックが、作業を終えるときに変えた Markdown の文章を点検し、`git push` の前に `docs/review/` の観点でブランチの差分をレビューする。
+
+PR を Claude Code でレビューさせるには(`.github/workflows/claude-code-review.yml`)、リポジトリの secrets に `CLAUDE_CODE_OAUTH_TOKEN`(`claude setup-token` で発行する)を設定する。PR やコメントで `@claude` と書くと、`.github/workflows/claude.yml` が応答する。
+
 ルートの `.env` は [dotenvx](https://dotenvx.com/) で値を暗号化してコミットしている。復号の鍵 `.env.keys` を既存の開発者から安全な経路で受け取り、ルートに置く。`.env.keys` はコミットしない。値の追加と変更は `pnpm exec dotenvx set <名前> <値>` で行う(暗号化した状態で書き込まれる)。
 
 開発者ごとに異なる値は `.env.local` に `pnpm exec dotenvx set -f .env.local <名前> <値>` で書く。`.env.local` はコミットせず、同じ名前の値は `.env` より優先される。
@@ -114,4 +118,6 @@ pnpm --filter @myapp/api dev
 | AI エージェント向けの指示(規約と作業の進め方) | `CLAUDE.md` / `docs/workflow.md` |
 | 要件定義(要件 ID と実装状況)                  | `docs/requirements.md`           |
 | 判断の記録・要確認事項(ADR。adrs で管理する)  | `docs/adr/`                      |
+| レビューの観点(Claude のレビューと手元の点検)  | `docs/review/`                   |
+| Codex などのエージェント向けの入口             | `AGENTS.md`                      |
 | システム構成設計                              | `docs/architecture.md`           |

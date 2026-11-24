@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prose-review.sh",
+            "timeout": 600,
+            "statusMessage": "文章を点検しています"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push*)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/review.sh",
+            "timeout": 900,
+            "statusMessage": "push の前に手元でレビューしています"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/reset-review-rounds.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
