@@ -409,8 +409,9 @@ export default withNuxt(
     'coverage/',
     'dist/',
     'node_modules/',
-    // ESLintの設定そのもの。tsconfigの外にあり型情報を要するルールを当てられない
+    // ESLintとdependency-cruiserの設定ファイル。tsconfigの外にあり型情報を要するルールを当てられない
     'eslint.config.mjs',
+    '.dependency-cruiser.mjs',
     'eslint-rules/',
     // 自作ルールの検査用。わざと規約に反した書き方をしている
     'test/eslint/fixtures/',

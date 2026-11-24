@@ -7,6 +7,9 @@
       "outputs": ["dist/**"]
     },
     "depcruise": {},
+    "@myapp/web#depcruise": {
+      "dependsOn": ["^build"]
+    },
     "lint": {},
     "typecheck": {
       "dependsOn": ["^build"]

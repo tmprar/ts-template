@@ -41,7 +41,7 @@ pre-commit:
 
     - name: depcruise
       root: template/
-      glob: 'template/apps/api/{src,test}/**/*.ts'
+      glob: '{template/apps/api/{src,test}/**/*.ts,template/apps/web/app/**/*.{ts,vue}}'
       run: pnpm turbo depcruise
 
     # lint-web と typecheck は順に実行する(理由は template/lefthook.yml)

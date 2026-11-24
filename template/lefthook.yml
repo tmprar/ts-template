@@ -25,7 +25,7 @@ pre-commit:
       stage_fixed: true
 
     - name: depcruise
-      glob: 'apps/api/{src,test}/**/*.ts'
+      glob: '{apps/api/{src,test}/**/*.ts,apps/web/app/**/*.{ts,vue}}'
       run: pnpm turbo depcruise
 
     # lint-web と typecheck は並行させず、順に実行する。typecheck が実行する nuxt prepare が
