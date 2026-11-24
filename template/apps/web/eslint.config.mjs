@@ -1,5 +1,6 @@
 import { fixupPluginRules } from '@eslint/compat'
 import sharedConfig from '@myapp/eslint-config'
+import pluginQuery from '@tanstack/eslint-plugin-query'
 import boundaries from 'eslint-plugin-boundaries'
 import globals from 'globals'
 import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths'
@@ -28,6 +29,7 @@ const importAliases = [
 export default withNuxt(
   ...sharedConfig.configs['recommended'],
   ...sharedConfig.configs['recommended/ts'],
+  ...pluginQuery.configs['flat/recommended'],
   {
     files: ['**/*.ts'],
     languageOptions: {
@@ -79,25 +81,28 @@ export default withNuxt(
     },
     settings: {
       /*
-        FCISの層をそのまま要素として定義する。
-        Functional Core(utils・domain)は純粋関数、Imperative Shell(api・composables・
-        pages・plugins)がI/Oと状態、View(components・layouts)は描画に徹する
+        app をほかの要素より前には置かない。boundaries は先に一致した要素を採用するため、
+        前に置くと全ファイルが app になる
       */
       ['boundaries/elements']: [
+        { capture: ['featureName'], pattern: 'app/features/*', type: 'feature' },
+        { pattern: 'app/generated', type: 'generated' },
         { pattern: 'app/utils', type: 'utils' },
-        { pattern: 'app/domain', type: 'domain' },
         { pattern: 'app/composables', type: 'composables' },
         { pattern: 'app/components', type: 'components' },
-        { pattern: 'app/layouts', type: 'layouts' },
-        { pattern: 'app/pages', type: 'pages' },
-        { pattern: 'app/plugins', type: 'plugins' },
-        { pattern: 'app/generated', type: 'generated' },
+        { pattern: 'app', type: 'app' },
+        { pattern: 'test', type: 'test' },
+      ],
+      ['boundaries/files']: [
+        { category: 'component', pattern: 'app/features/*/components/**' },
+        { category: 'composable', pattern: 'app/features/*/composables/**' },
+        { category: 'utils', pattern: 'app/features/*/utils/**' },
       ],
       ['boundaries/ignore']: ['**/node_modules/**'],
       /*
-        ルートのtsconfigはreferencesだけでpathsを持たない。
-        ~/* の解決先はNuxtが生成するtsconfig.app.jsonにあるため、そちらを見せる。
-        解決できないとboundariesが依存先の層を判定できず、黙って素通りする
+        resolverにはルートのtsconfigではなくtsconfig.app.jsonを指定する。
+        ルートのtsconfigはreferencesだけでpathsを持たず、~/* の解決先はNuxtが生成するtsconfig.app.jsonにある。
+        ~/* を解決できないとboundariesが依存先の要素を判定できず、違反があっても報告しない
       */
       ['import/resolver']: {
         typescript: {
@@ -110,77 +115,153 @@ export default withNuxt(
       ['boundaries/dependencies']: [
         'error',
         {
+          checkInternals: true,
           default: 'allow',
           policies: [
-            /*
-              Functional Coreは外側へ依存しない。utilsはどこにも、domainはutilsだけに依存する。
-              ここを守ることで、状態やI/Oを持たない部分をそのままテストできる
-            */
             {
               disallow: {
                 to: {
                   element: [
+                    { type: 'feature' },
                     { type: 'composables' },
                     { type: 'components' },
-                    { type: 'layouts' },
-                    { type: 'pages' },
-                    { type: 'plugins' },
                     { type: 'generated' },
-                    { type: 'domain' },
+                    { type: 'app' },
+                    { type: 'test' },
                   ],
                 },
               },
               from: {
-                element: { type: 'utils' },
+                element: {
+                  type: 'utils',
+                },
               },
             },
             {
               disallow: {
                 to: {
                   element: [
-                    { type: 'composables' },
+                    { type: 'feature' },
                     { type: 'components' },
-                    { type: 'layouts' },
-                    { type: 'pages' },
-                    { type: 'plugins' },
-                    { type: 'generated' },
+                    { type: 'app' },
+                    { type: 'test' },
                   ],
                 },
               },
               from: {
-                element: { type: 'domain' },
+                element: {
+                  type: 'composables',
+                },
               },
+            },
+            {
+              disallow: {
+                to: {
+                  element: [
+                    { type: 'feature' },
+                    { type: 'composables' },
+                    { type: 'generated' },
+                    { type: 'app' },
+                    { type: 'test' },
+                  ],
+                },
+              },
+              from: {
+                element: {
+                  type: 'components',
+                },
+              },
+            },
+            {
+              disallow: {
+                to: {
+                  element: [{ type: 'app' }, { type: 'test' }],
+                },
+              },
+              from: {
+                element: {
+                  type: 'feature',
+                },
+              },
+            },
+            {
+              disallow: {
+                to: {
+                  element: {
+                    fileInternalPath: '!index.ts',
+                    type: 'feature',
+                  },
+                },
+              },
+              message: '機能の外からは index.ts だけを import する',
+            },
+            {
+              disallow: {
+                to: {
+                  element: {
+                    captured: { featureName: '!{{ from.element.captured.featureName }}' },
+                    type: 'feature',
+                  },
+                },
+              },
+              from: {
+                element: {
+                  type: 'feature',
+                },
+              },
+              message: '機能は別の機能に依存しない(機能の組み合わせは app/pages のルートで行う)',
+            },
+            // テストの対象は機能の中の1つのコンポーネントやcomposableであるため、テストにはPublic APIの境界を適用しない
+            {
+              allow: {
+                to: {
+                  element: {
+                    type: 'feature',
+                  },
+                },
+              },
+              from: {
+                element: {
+                  type: 'test',
+                },
+              },
+            },
+            {
+              disallow: {
+                to: {
+                  element: [
+                    { type: 'composables' },
+                    { type: 'components' },
+                    { type: 'generated' },
+                    { type: 'app' },
+                  ],
+                },
+              },
+              from: { file: { categories: 'utils' } },
+              message: '機能の utils は composable・コンポーネント・API の生成物に依存しない',
             },
             /*
-              生成されたクライアントを呼ぶのはcomposablesとpluginsだけ。
-              CoreとViewはI/Oを持たず、pagesは取得をcomposablesに任せる
+              この許可(同じ機能の中のファイルどうしのimport)を、役割どうしの依存の向きを決めるポリシーより後には置かない。
+              boundariesは後ろに書いたポリシーを優先するため
             */
             {
-              disallow: {
-                to: {
-                  element: { type: 'generated' },
-                },
-              },
-              from: {
-                element: [
-                  { type: 'utils' },
-                  { type: 'domain' },
-                  { type: 'components' },
-                  { type: 'layouts' },
-                  { type: 'pages' },
-                ],
-              },
+              allow: { dependency: { relationship: { from: 'internal' } } },
             },
-            // Viewは描画に徹する。状態やI/Oを持つ層には依存しない
             {
               disallow: {
-                to: {
-                  element: [{ type: 'pages' }, { type: 'plugins' }],
-                },
+                to: { file: { categories: { anyOf: ['component', 'composable'] } } },
               },
-              from: {
-                element: { type: 'components' },
-              },
+              from: { file: { categories: 'utils' } },
+              message: '機能の utils はいちばん下の層。上の層に依存しない',
+            },
+            /*
+              コンポーネントがAPIを直接呼ばず、取得と更新の扱い(取得し直す対象、失敗の案内)を機能のcomposableに集めるため、
+              機能のコンポーネントから生成物への依存を禁止する。appと役割の分類を持たないファイル(app/composables)は、このポリシーの対象外
+            */
+            {
+              disallow: { to: { element: { type: 'generated' } } },
+              from: { file: { categories: 'component' } },
+              message: 'API の生成物を呼ぶのは composable だけ',
             },
           ],
         },
@@ -192,7 +273,7 @@ export default withNuxt(
       生成された型はどの層からも使わない。層の規則はboundariesが見るが、
       ファイル単位の禁止はこちらの方が素直に書ける。
       OpenAPI由来の型はドメインの語彙を持たず生成の都合がそのまま現れるため、
-      画面が必要とする形はdomainが構造的に宣言し、APIの戻り値は推論で受ける。
+      画面が必要とする形は機能のutilsが構造的に宣言し、APIの戻り値は推論で受ける。
       生成物どうしの参照(sdk.gen→types.gen)は妨げないようapp/generatedは対象外
     */
     files: ['app/**/*.ts', 'app/**/*.vue'],
@@ -205,7 +286,7 @@ export default withNuxt(
             {
               group: ['**/generated/**/types.gen', '**/generated/**/types.gen.ts'],
               message:
-                'APIの生成型は使わない。必要な形はapp/domainで構造的に宣言し、APIの戻り値は推論で受ける',
+                'APIの生成型は使わない。必要な形は機能のutilsで構造的に宣言し、APIの戻り値は推論で受ける',
             },
           ],
         },
@@ -213,15 +294,18 @@ export default withNuxt(
     },
   },
   {
-    // composablesはNuxtの慣習に合わせてcamelCase(useFoo.ts)とする
-    files: ['app/composables/**/*.ts'],
+    /*
+      composablesはNuxtの慣習に合わせてcamelCase(useFoo.ts)とする。
+      kebab-caseも許可する。このルールはディレクトリ名も検査し、機能のディレクトリ名はkebab-caseである
+    */
+    files: ['app/composables/*.ts', 'app/features/*/composables/*.ts'],
     rules: {
       ['unicorn/filename-case']: [
         'error',
         {
           cases: {
             camelCase: true,
-            kebabCase: false,
+            kebabCase: true,
             pascalCase: false,
             snakeCase: false,
           },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TodoItem } from '~/domain/todo'
+import type { TodoItem } from '~/features/todo/utils/todo'
 
 /**
  * todoの1行。描画に徹し、操作は親へ伝えるだけにする

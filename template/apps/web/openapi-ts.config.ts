@@ -28,5 +28,13 @@ export default defineConfig({
     entryFile: false,
     path: 'app/generated/api',
   },
-  plugins: ['@hey-api/client-fetch'],
+  plugins: ['@hey-api/client-axios', {
+    mutationKeys: true,
+    name: '@tanstack/vue-query',
+    /*
+      queryKeyにOpenAPIのtag(controllerごとに付く)を含める。必須の引数を持つ取得も、
+      引数の値を問わず、tagの前方一致でまとめて取得し直せるようにするため
+    */
+    queryKeys: { tags: true },
+  }],
 })

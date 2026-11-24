@@ -36,3 +36,10 @@
 - 決定: テンプレートに鍵は置かない。CLI が `.env.example` を `.env` に改名し、install と lint の後に `pnpm exec dotenvx encrypt` を実行して、プロジェクトごとの鍵 `.env.keys` を作る。install しないときは次にやることに `pnpm exec dotenvx encrypt` を出す
 - 決定: テンプレートの中では `.env` を `.gitignore` で無視し続ける(`# template:start` の印で囲み、作ったプロジェクトからは消す)。`.env.keys` はどちらでも無視する
 - 理由: テンプレートに暗号化した `.env` と鍵を置くと、作ったプロジェクトがすべて同じ鍵を共有する。テンプレートの中で `.env` を無視しないと、開発用の平文の `.env` がこのリポジトリの未追跡のファイルに出る
+
+## 2026-11-24 web を機能ごとのディレクトリで構成し、取得と更新を TanStack Query で書く
+- 決定: akitoki(#63, #72, #73, #74)に合わせ、サンプルの todo を `app/features/todo/` に移す。`app/domain` はなくし、純関数は機能の `utils/` と `app/utils/` に置く。境界の規則は akitoki の eslint-plugin-boundaries の設定をそのまま使う
+- 決定: 自作のコードの自動 import を止め(`components.dirs: []`・`imports.scan: false`)、使うファイルが import する。import 文が無いと、境界の規則で依存を検査できないため
+- 決定: 取得と更新は TanStack Query で書き、生成するクライアントを hey-api の axios 版と `@tanstack/vue-query` プラグインにする。更新の失敗は `Result` で返さず、`onError` でトーストを出す。web の依存から neverthrow を外し、`docs/workflow.md` の採用済みのスタックに TanStack Query と axios を加える
+- 決定: 取得し直しに失敗しても、前に取得した一覧を表示し続ける。読み込めなかった案内は、最初の取得に失敗して一覧が無いときだけ出す
+- 要確認: 確認中に、DB を止めると API のプロセスが落ちることが分かった。`pg.Pool` に `error` の listener が無く、DB が接続を切ったときの `error` イベントが未処理の例外になる。akitoki も同じ作りで、今回の取り込みの範囲外なので直していない

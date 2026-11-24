@@ -26,7 +26,7 @@
 
 ## 依存パッケージ
 
-- 採用済みのスタック(NestJS / Drizzle / valibot / pg-boss / neverthrow / Nuxt / Nuxt UI / vitest)とその公式の周辺パッケージは追加してよい
+- 採用済みのスタック(NestJS / Drizzle / valibot / pg-boss / neverthrow / Nuxt / Nuxt UI / TanStack Query / axios / vitest)とその公式の周辺パッケージは追加してよい
 - それ以外は追加しない。必要と判断したら `docs/decisions.md` に提案として理由を残し、既存の手段で実装する
 - バージョン指定は `~` を付ける(`pnpm-workspace.yaml` の `savePrefix`)
 

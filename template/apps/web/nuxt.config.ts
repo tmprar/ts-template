@@ -13,6 +13,13 @@ export default defineNuxtConfig({
     preference: 'system',
   },
   compatibilityDate: '2025-07-15',
+  /*
+    自作のコンポーネントは自動で登録せず、使うファイルが import する。
+    import 文があると、機能のディレクトリの間の依存を eslint-plugin-boundaries で検査できる
+  */
+  components: {
+    dirs: [],
+  },
   css: ['~/assets/css/app.css'],
   devServer: {
     // APIが3000を使うため衝突を避ける。APIのWEB_APP_ORIGIN(CORS許可オリジン)と揃えること
@@ -30,6 +37,10 @@ export default defineNuxtConfig({
         strict: true,
       },
     },
+  },
+  // 自作の composable と関数は自動 import の対象にせず、使うファイルが import する
+  imports: {
+    scan: false,
   },
   modules: ['@nuxt/eslint', '@nuxt/ui'],
   runtimeConfig: {
@@ -62,7 +73,7 @@ export default defineNuxtConfig({
       },
       include: ['../test/**/*'],
       /*
-        解決できないコンポーネントのタグと、宣言していないprops・イベント・ディレクティブを、型検査のエラーにする。
+        importしていないコンポーネントのタグと、宣言していないprops・イベント・ディレクティブを、型検査のエラーにする。
         vue-tscの既定では、解決できないタグを実行時に登録されるコンポーネントとみなし、宣言していない属性をfallthroughとみなして報告しない。
         v-modelの値の型の検査(strictVModel)だけは外す。Nuxt UIの部品は使わない値(UCheckboxの'indeterminate'など)も含めた型で値を返すため、
         検査するとv-modelを使えず、:model-valueと@update:model-valueに分けて値を変換することになる

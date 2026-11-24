@@ -109,14 +109,37 @@ todo/
 
 ### web の構成
 
-- 層は FCIS。Functional Core は `app/utils/`(どこにも依存しない汎用の純関数。必要になったら作る)と `app/domain/`(utils だけに依存)の純関数である。
-  Imperative Shell は `app/composables/`・`app/pages/`・`app/plugins/`(I/O と状態)、View は `app/components/`・`app/layouts/`(描画に徹する)。
-  依存の向きは eslint-plugin-boundaries で強制している
-- 生成された API クライアント(`app/generated/`)を呼ぶのは composables と plugins だけ。生成された型(`types.gen`)はどの層からも import しない。
-  画面が必要とする形は `app/domain/` で構造的に宣言し、API の戻り値は推論で受ける
+- `app/` は、機能ごとのディレクトリ(`features/`)と、どの機能にも属さないコードを置く `components/`・`composables/`・`utils/`・`generated/` で構成する。構成は bulletproof-react の project structure に合わせている
+
+  ```
+  app/
+    app.vue, error.vue, layouts/, middleware/, plugins/, assets/
+    pages/                  # Nuxt のルート。画面の中身を書き、複数の機能を組み合わせる
+    features/<機能>/        # 必要なディレクトリだけを置く
+      index.ts              # 機能の公開面。機能の外で使うものだけを export する
+      components/           # その機能のコンポーネント
+      composables/          # その機能の composable。API の取得と更新(TanStack Query)もここに書く
+      utils/                # 純粋関数と型
+    components/             # どの機能にも属さない、props とスロットだけで表示が決まる部品
+    composables/            # どの機能にも属さない composable
+    utils/                  # どの機能にも属さない純粋関数
+    generated/api/          # API の生成物
+  ```
+
+- 画面の中身は `app/pages/` のルートのファイルに書く。機能のディレクトリには画面を置かない
+- 機能は、別の機能を import しない。複数の機能を使う処理は `app/pages/` のルートに書く
+- 機能の外からは、機能の `index.ts` だけを import する(`import { TodoList, useTodos } from '~/features/todo'`)。機能の中のファイルどうしと `test/` のテストは、ファイルを指定して import する
+- 依存の向きは、`app/utils`・`app/composables`・`app/components` → 機能 → `app/pages`・`layouts`・`middleware`・`plugins` の一方向にする。
+  機能の `utils/` はいちばん下の層で、API の生成物を呼ぶのは composable だけにする。規則は eslint-plugin-boundaries で強制している(`apps/web/eslint.config.mjs`)
+- 生成された型(`types.gen`)はどの層からも import しない。画面が必要とする形は機能の `utils/` で構造的に宣言し、API の戻り値は推論で受ける
+- 自作のコードは、使うファイルが明示的に import する。自動 import で使うのは、Vue・Nuxt の API と、Nuxt・Nuxt UI のコンポーネントだけ(`nuxt.config.ts` の `components.dirs` と `imports.scan`)
+- API の取得と更新は TanStack Query(`@tanstack/vue-query`)で、機能の `composables/` の composable の中に書く。`useAsyncData` は使わない。
+  `queryKey` と取得・更新の関数は手で書かず、生成された `…Options()` / `…Mutation()`(`app/generated/api/@tanstack/vue-query.gen.ts`)を渡す。`…Mutation()` の戻り値をスプレッドするときは `asMutationOptions` を通す
+- 取得結果は、購読する画面が無くなったらキャッシュから削除する(`plugins/vue-query.ts` で QueryClient の既定の `gcTime` を 0 にしている)
+- 更新のあとに取得し直す取得は、`useMutation` の `meta.invalidates` に queryKey で書く。取得し直す処理は `plugins/vue-query.ts` の MutationCache の `onSettled` にだけ置く
+- 更新の失敗は `useMutation` の `onError` で `useNotify` の `error` を呼び、トーストで伝える。失敗は生成クライアント(hey-api の axios クライアント)が `AxiosError` で型付けする。接続の失敗は `error.response` が無いことで見分ける
+- composable は `useMutation` の `mutate` を操作の名前(`addTodo`)で返す。画面に固有の後処理(入力欄を空にするなど)は、画面が `mutate` の第 2 引数のコールバックに書く
 - 相対 import は使わない(`~` / `#shared` / `#server` のエイリアス)
-- 想定できる失敗は例外ではなく `Result`(neverthrow)で返す(API と同じ)。自前の Result 型は作らない。
-  失敗の型も API と同じ `{ cause?: unknown, type: <種類> }` にし、`catch` した例外は捨てずに `cause` に載せる
 - props は分割代入せず `const props = defineProps<...>()` で受け、script でもテンプレートでも `props.x` と参照する。ESLint(`vue/define-props-destructuring` と自作の `local/no-bare-props-in-template`)で強制している
 - 素の名前で書けると、それが prop か script のローカルか読んで分からず、参照する位置が computed の依存の追跡に関わることも見えなくなるため
 - 入力は送る前に `@myapp/contracts` のスキーマで検証する(`UForm` の `schema` に渡す)。検証の規則と文言を web 側に書き直さない
@@ -125,7 +148,7 @@ todo/
 
 ### テスト
 
-- web は `app/domain/`・`app/utils/` の純関数と、主要コンポーネントの単体
+- web は `app/utils/`・機能の `utils/` の純関数と、主要コンポーネントの単体
 - カバレッジは単体と結合を合算して測る。全体と純関数の層のしきい値は各パッケージの `vitest.config.ts`、PR で変更した行のカバレッジの基準は `.github/workflows/ci.yml` にある
 
 ## 作業ルール

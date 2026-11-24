@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 const appDirectory = fileURLToPath(new URL('app', import.meta.url))
 
 // Functional Core(純関数)の置き場
-const coreDirectories = ['app/domain', 'app/utils']
+const coreDirectories = ['app/utils', 'app/features/*/utils']
 
 /*
   全体のしきい値は、カバレッジが大きく下がったことを止めるために置き、実際の値との間に数ポイントの余裕を残す。
@@ -57,7 +57,7 @@ export default defineConfig(async () => ({
         test: {
           environment: 'node',
           globals: true,
-          include: ['app/{domain,utils}/**/*.spec.ts'],
+          include: ['app/utils/**/*.spec.ts', 'app/features/*/utils/**/*.spec.ts'],
           name: 'core',
         },
       },

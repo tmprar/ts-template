@@ -1,9 +1,9 @@
 // @vitest-environment nuxt
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 
-import type { TodoItem } from '~/domain/todo'
+import type { TodoItem } from '~/features/todo/utils/todo'
 
-import TodoListItem from '~/components/TodoListItem.vue'
+import TodoListItem from '~/features/todo/components/TodoListItem.vue'
 
 const mount = async (item: TodoItem) =>
   await mountSuspended(TodoListItem, { props: { item } })

@@ -1,7 +1,7 @@
 import {
   countTodosByStatus,
   type TodoItem,
-} from '~/domain/todo'
+} from '~/features/todo/utils/todo'
 
 const todo = (id: string, status: TodoItem['status']): TodoItem => ({
   id,
