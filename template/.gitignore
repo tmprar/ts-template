@@ -35,12 +35,16 @@ coverage/
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# dotenv environment variable files。作ったプロジェクトの .env は dotenvx で値を暗号化してコミットする
+# template:start
 .env
+# template:end
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
+# dotenvx が .env を復号する秘密鍵
+.env.keys
 
 # temp directory
 .temp

@@ -12,8 +12,7 @@
   },
   "scripts": {
     "prepare": "lefthook install",
-    "compose:up": "docker compose up -d --wait --build --remove-orphans",
-    "compose:down": "docker compose down",
+    "compose": "dotenvx run -f .env.local -f .env -- docker compose",
     "build": "turbo build",
     "lint": "turbo lint",
     "depcruise": "turbo depcruise",
@@ -21,15 +20,15 @@
     "test": "turbo test",
     "test:cov": "turbo test:cov",
     "test:integration": "turbo test:integration",
-    "predev": "docker compose up -d --wait --build --remove-orphans",
-    "dev": "dotenv -e .env -- turbo dev generate:api:watch",
-    "predb": "docker compose up -d --wait --build --remove-orphans",
-    "db": "dotenv -e .env -- pnpm --filter @myapp/api db"
+    "predev": "pnpm compose up -d --wait --build --remove-orphans",
+    "dev": "dotenvx run -f .env.local -f .env -- turbo dev generate:api:watch",
+    "predb": "pnpm compose up -d --wait --build --remove-orphans",
+    "db": "dotenvx run -f .env.local -f .env -- pnpm --filter @myapp/api db"
   },
   "devDependencies": {
     "@commitlint/cli": "~21.2.3",
     "@commitlint/config-conventional": "~21.2.3",
-    "dotenv-cli": "~11.0.0",
+    "@dotenvx/dotenvx": "~2.38.2",
     "lefthook": "~2.1.12",
     "turbo": "~2.10.12"
   }

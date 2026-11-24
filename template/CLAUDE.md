@@ -17,7 +17,8 @@ pnpm workspace + Turborepo のモノレポ。
 
 ```bash
 pnpm install
-pnpm dev        # DB コンテナ(compose.yml)を起動し、ルート .env を注入して api/web を起動
+pnpm dev        # DB コンテナ(compose.yml)を起動し、ルートの .env.local・.env を注入して api/web を起動
+pnpm compose    # Docker Compose(.env.local・.env を復号して注入。例: pnpm compose ps)
 pnpm build
 pnpm lint       # ESLint(--fix 付き)
 pnpm typecheck
@@ -30,11 +31,11 @@ pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 
 インフラは `pnpm --filter @myapp/infra cdk <deploy|diff|synth>`(deploy と diff には AWS 認証情報が必要)。
 
-`--filter` で直接実行するとルート `.env` の注入も DB コンテナの起動も行われない。通常はルートのスクリプトを使う。
+`--filter` で直接実行するとルートの `.env.local`・`.env` の注入も DB コンテナの起動も行われない。通常はルートのスクリプトを使う。
 
 ## 前提
 
-- 開発環境はルート駆動。環境変数はルート `.env` を `dotenv-cli` で注入し、パッケージ側から外を参照しない
+- 開発環境はルート駆動。環境変数はルートの `.env.local`・`.env` を `dotenvx run` で注入し、パッケージ側から外を参照しない。`.env` は値を dotenvx で暗号化してコミットし、開発者ごとに異なる値は `.env.local`(コミットしない)に書く。復号の鍵 `.env.keys` はコミットしない
 - API では `process.env` を直接読まない。`apps/api/src/platform/config/env.schema.ts` に追加し、`AppConfigService` 経由で参照する。例外は Nest より先に走る `src/instrument.ts`(Sentry)だけで、そこも同じスキーマで検証して読む
 - `@nestjs/config` の `validationSchema` は Standard Schema 対応。valibot をそのまま渡している
 - `apps/api` の import は `#app/*` / `#test/*` のサブパス(`package.json` の `imports`)。相対 import は ESLint で禁止している

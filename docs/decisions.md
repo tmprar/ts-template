@@ -30,3 +30,9 @@
 - 理由: Domain がテンプレートのファイルを読むことになるが、テンプレートはコードと一緒に配る固定の資産で、内容は実行中に変わらない。Domain の単体テストで件名と本文を確かめられる
 - 決定: Gateway の規約(`template/CLAUDE.md`)は残す。サンプルに実装は無くなるが、モジュールが外部サービスと直接やり取りするときの置き場所として要る
 - 決定: 本文の末尾の改行は残す(テンプレートのファイルの末尾の改行がそのまま出る)。build 関数では落とさない
+
+## 2026-11-24 作ったプロジェクトの .env を dotenvx で暗号化してコミットする
+- 決定: akitoki(#96, #97)に合わせ、`dotenv-cli` を `@dotenvx/dotenvx` に替え、ルートのスクリプトを `dotenvx run -f .env.local -f .env --` にする。Docker Compose は `pnpm compose` から復号して実行し、`compose:up`・`compose:down` はなくす
+- 決定: テンプレートに鍵は置かない。CLI が `.env.example` を `.env` に改名し、install と lint の後に `pnpm exec dotenvx encrypt` を実行して、プロジェクトごとの鍵 `.env.keys` を作る。install しないときは次にやることに `pnpm exec dotenvx encrypt` を出す
+- 決定: テンプレートの中では `.env` を `.gitignore` で無視し続ける(`# template:start` の印で囲み、作ったプロジェクトからは消す)。`.env.keys` はどちらでも無視する
+- 理由: テンプレートに暗号化した `.env` と鍵を置くと、作ったプロジェクトがすべて同じ鍵を共有する。テンプレートの中で `.env` を無視しないと、開発用の平文の `.env` がこのリポジトリの未追跡のファイルに出る

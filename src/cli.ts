@@ -11,7 +11,7 @@ import {
 } from '@clack/prompts'
 import mri from 'mri'
 import { spawn } from 'node:child_process'
-import { copyFile } from 'node:fs/promises'
+import { rename } from 'node:fs/promises'
 import path from 'node:path'
 
 import {
@@ -109,7 +109,8 @@ export async function runCli(argv: string[]): Promise<number> {
     await copyTemplate(directory)
     progress.message('プロジェクトに合わせて書き換えています')
     await applyTemplate(directory, answers.name)
-    await copyFile(path.join(directory, '.env.example'), path.join(directory, '.env'))
+    // 作ったプロジェクトでは .env を暗号化してコミットし、名前と説明のコメントも .env に持つので、.env.example は残さない
+    await rename(path.join(directory, '.env.example'), path.join(directory, '.env'))
     progress.stop('テンプレートを用意しました')
   } catch (error) {
     progress.stop('テンプレートを用意できませんでした')
@@ -144,6 +145,17 @@ export async function runCli(argv: string[]): Promise<number> {
 
       return 1
     }
+
+    // 鍵はプロジェクトごとに作る。.env.keys は .gitignore で無視され、.env には暗号化した値だけが残る
+    log.step('.env の値を暗号化しています(pnpm exec dotenvx encrypt)')
+
+    if (await runCommand('pnpm', ['exec', 'dotenvx', 'encrypt'], directory) !== 0) {
+      log.warn('.env を暗号化できませんでした。コミットする前に `pnpm exec dotenvx encrypt` を実行してください')
+
+      return 1
+    }
+
+    log.info('.env を復号する鍵は .env.keys にあります。コミットせず、ほかの開発者には安全な経路で渡してください')
   }
 
   note(composeNextSteps(answers), '次にやること')
@@ -258,7 +270,7 @@ function composeNextSteps(answers: Answers): string {
   return [
     `cd ${/\s/.test(answers.directory) ? `"${answers.directory}"` : answers.directory}`,
     ...(answers.git ? [] : ['git init']),
-    ...(answers.install ? [] : ['pnpm install', 'pnpm lint']),
+    ...(answers.install ? [] : ['pnpm install', 'pnpm lint', 'pnpm exec dotenvx encrypt']),
     'pnpm db migrate',
     'pnpm dev',
   ].join('\n')
