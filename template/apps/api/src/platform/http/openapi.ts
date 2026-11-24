@@ -16,7 +16,9 @@ import {
 } from 'node:fs/promises'
 import path from 'node:path'
 
-// ルートデコレータや@ApiResponseに渡したvalibotスキーマをOpenAPIスキーマへ変換する
+/**
+ * ルートデコレータや@ApiResponseに渡したvalibotスキーマを、OpenAPIのスキーマに変換して返す
+ */
 const standardSchemaConverter: StandardSchemaConverter = (
   schema,
   { schemaType },
@@ -38,6 +40,9 @@ const standardSchemaConverter: StandardSchemaConverter = (
   return { schema: jsonSchema }
 }
 
+/**
+ * `app` のルートから、API の OpenAPI の文書を作って返す
+ */
 export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('myapp API')
@@ -61,6 +66,9 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
 */
 const outputPath = path.resolve('.out/openapi.json')
 
+/**
+ * OpenAPI の文書を、web が API クライアントを生成するときに読む openapi.json に書き出す
+ */
 export async function writeOpenApiDocument(
   document: OpenAPIObject,
 ): Promise<void> {

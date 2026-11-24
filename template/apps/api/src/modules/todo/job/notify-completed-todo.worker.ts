@@ -12,9 +12,9 @@ import { TodoUsecase } from '#app/modules/todo/todo.usecase.js'
 import { JobQueueService } from '#app/platform/job/index.js'
 
 /**
-通知のリトライ方針。最大3回で打ち切り、最終失敗はログに残すだけにする。
-完了そのものには影響させない
-*/
+ * 通知のリトライ方針。最大3回で打ち切り、最終失敗はログに残すだけにする。
+ * 完了そのものには影響させない
+ */
 const NOTIFY_COMPLETED_TODO_RETRY: JobRetryPolicy = {
   retryBackoff: true,
   retryDelay: 30,
@@ -35,6 +35,9 @@ export class NotifyCompletedTodoWorker implements OnModuleInit {
     private readonly usecase: TodoUsecase,
   ) {}
 
+  /**
+   * todo の完了の通知のジョブの処理を、ジョブキューに登録する
+   */
   public async onModuleInit(): Promise<void> {
     await this.jobQueue.register<NotifyCompletedTodoJobData>(
       NOTIFY_COMPLETED_TODO_QUEUE,

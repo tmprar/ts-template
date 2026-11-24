@@ -19,6 +19,9 @@ const BASE_URL
       'TEST_DATABASE_BASE_URLが未設定です。global-setup.ts経由で実行してください',
     )
 
+/**
+ * コンテナの接続先の URL のうち、データベース名だけを database に差し替えた URL を返す
+ */
 function databaseUrl(database: string): string {
   const url = new URL(BASE_URL)
 
@@ -27,7 +30,10 @@ function databaseUrl(database: string): string {
   return url.href
 }
 
-// worker専用の空DBを作り直す。FORCE指定で残存接続があっても切断してDROPする
+/**
+ * name のデータベースがあれば削除し、同じ名前の空のデータベースを作る。
+ * 前の実行の接続が残っていても削除できるよう、DROP に FORCE を付ける
+ */
 async function resetDb(name: string): Promise<void> {
   const admin = new pg.Client({ connectionString: databaseUrl('postgres') })
 

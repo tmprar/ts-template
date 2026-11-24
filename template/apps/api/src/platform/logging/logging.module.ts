@@ -21,13 +21,13 @@ import {
 import { AllExceptionsFilter } from '#app/platform/http/index.js'
 
 /**
-リクエスト ID を返すヘッダ。障害の問い合わせで利用者が示せるよう応答にも載せる
-*/
+ * リクエスト ID を返すヘッダ。障害の問い合わせで利用者が示せるよう応答にも載せる
+ */
 export const REQUEST_ID_HEADER = 'x-request-id'
 
 /**
-外形監視(Route 53 ヘルスチェック)が 30 秒おきに叩くため、リクエストログから外す
-*/
+ * 外形監視(Route 53 ヘルスチェック)が 30 秒おきに叩くため、リクエストログから外す
+ */
 const UNLOGGED_PATHS = new Set(['/api/health'])
 
 /**

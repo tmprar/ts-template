@@ -22,8 +22,12 @@ import {
   writeOpenApiDocument,
 } from '#app/platform/http/index.js'
 
+/**
+ * API のアプリを作り、設定を当てて、指定のポートで要求の受け付けを始める
+ */
 async function bootstrap() {
   // ロガーを pino に差し替えるまでのログを溜めておく(setupApp が useLogger する)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment -- Nest がオプションの型を interface でなく class で宣言しているため
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true })
   const config = app.get(AppConfigService)
 

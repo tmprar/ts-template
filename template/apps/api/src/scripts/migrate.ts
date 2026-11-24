@@ -16,6 +16,7 @@ import {
 const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.meta.url))
 
 // 接続先はアプリと同じくconfig経由で読む(process.envは直接参照しない)
+// eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment -- Nest がオプションの型を interface でなく class で宣言しているため
 const context = await NestFactory.createApplicationContext(AppConfigModule, {
   logger: false,
 })

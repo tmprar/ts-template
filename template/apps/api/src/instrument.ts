@@ -10,21 +10,21 @@ import * as v from 'valibot'
 import { envSchema } from '#app/platform/config/index.js'
 
 /**
-トレース(リクエストの内訳)を送る割合。無料枠(月 5,000 スパン)に収める。
-例外が起きたリクエストは割合によらず送られる
-*/
+ * トレース(リクエストの内訳)を送る割合。無料枠(月 5,000 スパン)に収める。
+ * 例外が起きたリクエストは割合によらず送られる
+ */
 const TRACES_SAMPLE_RATE = 0.1
 
 /**
-スパンに残す属性(並びは lint が辞書順に保つ)。URL のパスとクエリには identifier
-(外部サービス上の ID、共有 URL のトークンなど)が入りうるため、伏せる側ではなく残す側を並べる。
-伏せる側を並べる形は、新しい呼び出し先や SDK が増やした属性で静かに漏れる。
-
-残すのは「どこへ何をして何が返ったか」だけ:
-HTTP はメソッド・接続先・ステータス(URL は url.full / url.path に入るので残さない)、
-DB は placeholder のままの文と対象の構造(束縛した値は db.query.parameter.* で来る)、
-ジョブはキューの名前と操作(投入した値は残さない)
-*/
+ * スパンに残す属性(並びは lint が辞書順に保つ)。URL のパスとクエリには identifier
+ * (外部サービス上の ID、共有 URL のトークンなど)が入りうるため、伏せる側ではなく残す側を並べる。
+ * 伏せる側を並べる形は、新しい呼び出し先や SDK が増やした属性で静かに漏れる。
+ *
+ * 残すのは「どこへ何をして何が返ったか」だけ:
+ * HTTP はメソッド・接続先・ステータス(URL は url.full / url.path に入るので残さない)、
+ * DB は placeholder のままの文と対象の構造(束縛した値は db.query.parameter.* で来る)、
+ * ジョブはキューの名前と操作(投入した値は残さない)
+ */
 const SPAN_ATTRIBUTES_TO_KEEP = new Set([
   'db.collection.name',
   'db.namespace',

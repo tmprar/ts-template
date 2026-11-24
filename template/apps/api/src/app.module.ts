@@ -19,8 +19,10 @@ import { LoggingModule } from '#app/platform/logging/index.js'
     SentryModule.forRoot(),
     AppConfigModule,
     LoggingModule,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment -- nestjs-cls がオプションの型を interface でなく class で宣言しているため
     ClsModule.forRoot({
       global: true,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment -- nestjs-cls がオプションの型を interface でなく class で宣言しているため
       middleware: { mount: true },
       plugins: [
         new ClsPluginTransactional({

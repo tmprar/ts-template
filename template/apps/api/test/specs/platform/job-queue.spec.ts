@@ -19,6 +19,9 @@ describe('ジョブキューの投入', () => {
   const ROLLED_BACK_JOB = '00000000-0000-0000-0000-0000000000ff'
   const COMMITTED_JOB = '00000000-0000-0000-0000-0000000000ee'
 
+  /**
+   * `todoId` を持つジョブを pgboss のテーブルから探して返す。無ければ undefined を返す
+   */
   async function findJob(todoId: string): Promise<undefined | { id: string }> {
     const result = await ctx.db.execute<{ id: string }>(
       sql`SELECT id FROM pgboss.job WHERE data->>'todoId' = ${todoId}`,
@@ -28,9 +31,9 @@ describe('ジョブキューの投入', () => {
   }
 
   /**
-  ジョブを投入したトランザクションをコミットする。
-  afterEnqueueがthrowすればロールバックされる
-  */
+   * ジョブを投入したトランザクションをコミットする。
+   * afterEnqueueがthrowすればロールバックされる
+   */
   async function enqueueIn(
     todoId: string,
     afterEnqueue?: () => void,

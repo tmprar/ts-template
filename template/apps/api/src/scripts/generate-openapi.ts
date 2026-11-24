@@ -12,6 +12,7 @@ import {
   writeOpenApiDocument,
 } from '#app/platform/http/index.js'
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment -- Nest がオプションの型を interface でなく class で宣言しているため
 const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false })
 
 // global prefix をパスに反映させるため、本番と同じ設定を通す

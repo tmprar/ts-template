@@ -11,8 +11,8 @@ import {
 import { DatabaseHealthIndicator } from '#app/platform/health/database.health.js'
 
 /**
-死活監視が DB の応答を待つ上限。これを超えたら落ちているとみなす
-*/
+ * 死活監視が DB の応答を待つ上限。これを超えたら落ちているとみなす
+ */
 const DATABASE_TIMEOUT_MS = 3000
 
 /**
@@ -28,6 +28,9 @@ export class HealthController {
     private readonly database: DatabaseHealthIndicator,
   ) {}
 
+  /**
+   * API と DB が稼働しているかを返す
+   */
   @Get()
   @HealthCheck()
   public async check() {

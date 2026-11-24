@@ -26,6 +26,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     this.logger.setContext(AllExceptionsFilter.name)
   }
 
+  /**
+   * 捕まえた例外を、利用者に返す応答に変える。想定外の例外は内部のメッセージを出さずに 500 にする
+   */
   public catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>()
     const status = exception instanceof HttpException

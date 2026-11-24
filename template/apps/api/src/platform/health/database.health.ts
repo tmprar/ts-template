@@ -24,6 +24,9 @@ export class DatabaseHealthIndicator {
     private readonly healthIndicator: HealthIndicatorService,
   ) {}
 
+  /**
+   * DB に問い合わせて応答するかを確かめ、`key` の名前で結果を返す
+   */
   public check(key: string): HealthCheckAttempt {
     return this.healthIndicator
       .check(key)

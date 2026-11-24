@@ -23,10 +23,10 @@ import { AppConfigService } from '#app/platform/config/index.js'
 import { MailService } from '#app/platform/mail/index.js'
 
 /**
-todoを完了にできなかった理由
-*/
-export type CompleteTodoError
-  = | {
+ * todoを完了にできなかった理由
+ */
+export type CompleteTodoError =
+  | {
     todoId: string
     type: 'AlreadyCompleted'
   }
@@ -36,24 +36,24 @@ export type CompleteTodoError
   }
 
 /**
-todoを削除できなかった理由
-*/
+ * todoを削除できなかった理由
+ */
 export type DeleteTodoError = {
   todoId: string
   type: 'TodoNotFound'
 }
 
 /**
-todoの完了を知らせられなかった理由。`cause` は翻訳前の原因で、ログに出すためだけに運ぶ
-*/
+ * todoの完了を知らせられなかった理由。`cause` は翻訳前の原因で、ログに出すためだけに運ぶ
+ */
 export type NotifyCompletedTodoError = {
   cause?: unknown
   type: 'NoticeUnavailable'
 }
 
 /**
-todo
-*/
+ * todo
+ */
 export type TodoDto = {
   completedAt: Date | null
   createdAt: Date

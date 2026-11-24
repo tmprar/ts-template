@@ -19,13 +19,13 @@ import type { DrizzleAdapter } from '#app/platform/drizzle/index.js'
 import { AppConfigService } from '#app/platform/config/index.js'
 
 /**
-投入直後の実行遅延を抑えるためポーリングは最短にする
-*/
+ * 投入直後の実行遅延を抑えるためポーリングは最短にする
+ */
 const POLLING_INTERVAL_SECONDS = 0.5
 
 /**
-ジョブのリトライ方針。仕事の持ち主が許容する遅延に応じて決める
-*/
+ * ジョブのリトライ方針。仕事の持ち主が許容する遅延に応じて決める
+ */
 export type JobRetryPolicy = {
   retryBackoff: boolean
   retryDelay: number
@@ -62,10 +62,16 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
     })
   }
 
+  /**
+   * アプリの終了時に、ジョブキューを止める
+   */
   public async onApplicationShutdown(): Promise<void> {
     await this.boss?.stop()
   }
 
+  /**
+   * ジョブキューを起動する
+   */
   public async onModuleInit(): Promise<void> {
     const boss = new PgBoss(this.config.get('DATABASE_URL', { infer: true }))
 
@@ -124,6 +130,9 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
     )
   }
 
+  /**
+   * 起動済みのジョブキューを返す。起動前に呼ぶと例外を投げる
+   */
   private requireBoss(): PgBoss {
     const boss = this.boss
 
