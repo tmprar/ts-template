@@ -37,6 +37,7 @@ jobs:
       text: ${{ steps.filter.outputs.text }}
       text-files: ${{ steps.filter.outputs.text_files }}
       text-config: ${{ steps.filter.outputs.text-config }}
+      diff-coverage-scripts: ${{ steps.filter.outputs.diff-coverage-scripts }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: filter
@@ -63,14 +64,20 @@ jobs:
               - *shared
               - 'apps/**'
             # api の単体・結合
+            # api の単体・結合と、差分のカバレッジのスクリプト
             api:
               - *shared
               - 'apps/api/**'
+              - '.github/scripts/diff-coverage/**'
             # web の単体・結合。API クライアントは api の OpenAPI から生成するので apps/api/src も見る
             web:
               - *shared
               - 'apps/web/**'
               - 'apps/api/src/**'
+              - '.github/scripts/diff-coverage/**'
+            diff-coverage-scripts:
+              - '.github/scripts/diff-coverage/**'
+              - '.github/workflows/ci.yml'
             # 検査しないファイルは .textlintignore に書き、textlint が無視する
             text:
               - '**/*.md'
@@ -128,23 +135,62 @@ jobs:
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-24.04-arm
     permissions:
+      # main のカバレッジの artifact を、別のワークフローの実行から取得する
+      actions: read
       contents: read
       # カバレッジのコメントを PR に付ける
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # 差分のカバレッジは、比較の基準のブランチとの差分を読むので、履歴をすべて取得する
+          fetch-depth: 0
       - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           cache: true
           require-lockfile: true
           save-cache: false
       - run: pnpm test:cov --filter @myapp/api
+      # main のカバレッジは coverage-baseline.yml が保存する。artifact が無いとき(保存期間を過ぎたときなど)や取得に失敗したときも
+      # ジョブを失敗させず、差分のカバレッジは main との増減を省いて出す
+      - name: Download baseline coverage
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=coverage-baseline-api&per_page=20" \
+            --jq '[.artifacts[] | select(.expired | not) | select(.workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$id" ]; then
+            echo "main のカバレッジの artifact が無い"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/baseline.zip"
+          unzip -o -q "$RUNNER_TEMP/baseline.zip" -d "$RUNNER_TEMP/baseline"
       # テストが失敗しても、出力済みのカバレッジのレポートは PR のコメントに載せる
       - if: always()
         uses: davelosert/vitest-coverage-report-action@74c2d9210b4fc44c84d8213f61d7ec99837b7aa0 # v2
         with:
           name: api
           working-directory: apps/api
+      # 変更した行のカバレッジが 80% を下回ると失敗させ、通っていない行に注記を付ける
+      - name: Diff coverage
+        id: diff-coverage
+        if: always() && hashFiles('apps/api/coverage/coverage-final.json') != ''
+        env:
+          # リンク先は、PR の head ではなく、テストと差分の行番号の元になった merge コミットにする。head にすると、main が同じファイルを
+          # 変えていたときに行番号がずれる
+          DIFF_COVERAGE_BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}
+          DIFF_COVERAGE_OUTPUT: ${{ runner.temp }}/diff-coverage.md
+          DIFF_COVERAGE_BASELINE: ${{ runner.temp }}/baseline/coverage-summary.json
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/index.mjs apps/api/coverage "origin/${{ github.base_ref }}" apps/api 80
+      - name: Diff coverage comment
+        if: always() && steps.diff-coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/comment.mjs api "$RUNNER_TEMP/diff-coverage.md"
 
   # web の単体と結合(Nuxt 環境)を 1 回の実行にまとめ、カバレッジを合算して PR にコメントする
   test-web:
@@ -152,18 +198,72 @@ jobs:
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-24.04-arm
     permissions:
+      # main のカバレッジの artifact を、別のワークフローの実行から取得する
+      actions: read
       contents: read
+      # カバレッジのコメントを PR に付ける
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # 差分のカバレッジは、比較の基準のブランチとの差分を読むので、履歴をすべて取得する
+          fetch-depth: 0
       - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           cache: true
           require-lockfile: true
           save-cache: false
       - run: pnpm test:cov --filter @myapp/web
+      # main のカバレッジは coverage-baseline.yml が保存する。artifact が無いとき(保存期間を過ぎたときなど)や取得に失敗したときも
+      # ジョブを失敗させず、差分のカバレッジは main との増減を省いて出す
+      - name: Download baseline coverage
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=coverage-baseline-web&per_page=20" \
+            --jq '[.artifacts[] | select(.expired | not) | select(.workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$id" ]; then
+            echo "main のカバレッジの artifact が無い"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/baseline.zip"
+          unzip -o -q "$RUNNER_TEMP/baseline.zip" -d "$RUNNER_TEMP/baseline"
+      # テストが失敗しても、出力済みのカバレッジのレポートは PR のコメントに載せる
       - if: always()
         uses: davelosert/vitest-coverage-report-action@74c2d9210b4fc44c84d8213f61d7ec99837b7aa0 # v2
         with:
           name: web
           working-directory: apps/web
+      # 変更した行のカバレッジが 80% を下回ると失敗させ、通っていない行に注記を付ける
+      - name: Diff coverage
+        id: diff-coverage
+        if: always() && hashFiles('apps/web/coverage/coverage-final.json') != ''
+        env:
+          # リンク先は、PR の head ではなく、テストと差分の行番号の元になった merge コミットにする。head にすると、main が同じファイルを
+          # 変えていたときに行番号がずれる
+          DIFF_COVERAGE_BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}
+          DIFF_COVERAGE_OUTPUT: ${{ runner.temp }}/diff-coverage.md
+          DIFF_COVERAGE_BASELINE: ${{ runner.temp }}/baseline/coverage-summary.json
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/index.mjs apps/web/coverage "origin/${{ github.base_ref }}" apps/web 80
+      - name: Diff coverage comment
+        if: always() && steps.diff-coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/comment.mjs web "$RUNNER_TEMP/diff-coverage.md"
+
+  # 差分のカバレッジのスクリプトの単体テスト(node:test)
+  test-diff-coverage-scripts:
+    needs: [changes]
+    if: needs.changes.outputs.diff-coverage-scripts == 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: false
+          install: false
+      - run: node --test '.github/scripts/diff-coverage/*.test.mjs'

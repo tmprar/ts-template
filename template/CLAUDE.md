@@ -126,6 +126,7 @@ todo/
 ### テスト
 
 - web は `app/domain/`・`app/utils/` の純関数と、主要コンポーネントの単体
+- カバレッジは単体と結合を合算して測る。全体と純関数の層のしきい値は各パッケージの `vitest.config.ts`、PR で変更した行のカバレッジの基準は `.github/workflows/ci.yml` にある
 
 ## 作業ルール
 
