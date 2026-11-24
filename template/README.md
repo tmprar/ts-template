@@ -61,7 +61,7 @@ pnpm build             # ビルド
 pnpm lint              # ESLint
 pnpm typecheck         # 型検査
 pnpm test              # ユニットテスト(vitest)
-pnpm test:cov          # ユニットテストとカバレッジ(CI はこちらを実行し、PR にコメントする)
+pnpm test:cov          # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを実行し、PR にコメントする)
 pnpm test:integration  # 結合テスト(api は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネントと composable)
 pnpm depcruise         # 循環 import の検出
 pnpm dev               # 開発サーバー(watch)。DB コンテナも起動し、.env.local・.env を注入する

@@ -83,8 +83,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm depcruise
 
-  # api の単体(純関数)。カバレッジを測り、PR にコメントする
-  api-unit:
+  # api の単体と結合を 1 回の実行にまとめ、カバレッジを合算して PR にコメントする。
+  # 結合の DB は testcontainers が起動するので compose も .env も要らない
+  test-api:
     needs: [changes]
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-24.04-arm
@@ -100,31 +101,15 @@ jobs:
           require-lockfile: true
           save-cache: false
       - run: pnpm test:cov --filter @myapp/api
-      # テストが失敗しても出ている分のレポートは載せる
+      # テストが失敗しても、出力済みのカバレッジのレポートは PR のコメントに載せる
       - if: always()
         uses: davelosert/vitest-coverage-report-action@74c2d9210b4fc44c84d8213f61d7ec99837b7aa0 # v2
         with:
           name: api
           working-directory: apps/api
 
-  # api の結合。DB は testcontainers が起動するので compose も .env も要らない。
-  # vitest がファイル単位で並列実行し worker ごとに専用 DB を持つ。テスト本体は十数秒で
-  # ジョブの固定費(install・イメージ取得)の方が大きいため、シャード分割はしていない
-  api-integration:
-    needs: [changes]
-    if: needs.changes.outputs.api == 'true'
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
-        with:
-          cache: true
-          require-lockfile: true
-          save-cache: false
-      - run: pnpm test:integration --filter @myapp/api
-
-  # web の単体(純関数と ESLint ルール)。カバレッジを測り、PR にコメントする
-  web-unit:
+  # web の単体と結合(Nuxt 環境)を 1 回の実行にまとめ、カバレッジを合算して PR にコメントする
+  test-web:
     needs: [changes]
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-24.04-arm
@@ -144,18 +129,3 @@ jobs:
         with:
           name: web
           working-directory: apps/web
-
-  # web の結合(Nuxt 環境でのコンポーネント・composable)。サーバもブラウザも起動しない
-  web-integration:
-    needs: [changes]
-    if: needs.changes.outputs.web == 'true'
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
-        with:
-          cache: true
-          require-lockfile: true
-          save-cache: false
-      - run: pnpm test:integration --filter @myapp/web
-

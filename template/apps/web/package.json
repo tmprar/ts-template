@@ -14,7 +14,7 @@
     "test": "vitest run --project core --project eslint",
     "test:watch": "vitest --project core --project eslint",
     "test:integration": "vitest run --project nuxt",
-    "test:cov": "vitest run --coverage --project core --project eslint",
+    "test:cov": "vitest run --coverage",
     "nuxt:prepare": "nuxt prepare",
     "postinstall": "nuxt prepare"
   },

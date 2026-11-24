@@ -23,7 +23,7 @@ pnpm build
 pnpm lint       # ESLint(--fix 付き)
 pnpm typecheck
 pnpm test       # vitest(純関数の単体)
-pnpm test:cov   # 単体テストをカバレッジ付きで(CI はこちらを走らせ PR にコメントする)
+pnpm test:cov   # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを走らせ PR にコメントする)
 pnpm test:integration  # 結合テスト(API は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネント)
 pnpm depcruise  # 循環 import の検出
 pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
