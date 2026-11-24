@@ -26,6 +26,7 @@ pnpm test       # vitest(純関数の単体)
 pnpm test:cov   # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを走らせ PR にコメントする)
 pnpm test:integration  # 結合テスト(API は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネント)
 pnpm depcruise  # 循環 import の検出
+pnpm lint:text  # 日本語の文章の検査(textlint。検査しないファイルは .textlintignore)
 pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 ```
 
@@ -41,7 +42,7 @@ pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 - `apps/api` の import は `#app/*` / `#test/*` のサブパス(`package.json` の `imports`)。相対 import は ESLint で禁止している
 - web の API クライアントは `apps/api` の OpenAPI から生成する(`app/generated/api/`)。手で書かない
 - API の全ルートは `/api` 接頭辞付き(`app.setup.ts` の `API_PREFIX`)。本番は手前のプロキシが `/api/*` だけを API に流し、web と同一オリジンで配信する前提。開発の API リファレンスは `http://localhost:3000/api/docs`
-- コミット時に lefthook が lint・typecheck・depcruise と commitlint(コミットメッセージ)を走らせる。push 時はブランチ名を検査する
+- コミット時に lefthook が lint・typecheck・depcruise・textlint と commitlint(コミットメッセージ)を走らせる。push 時はブランチ名を検査する
 - 認証はテンプレートに含めていない。足すときは、セッションの書き込みを `req.session` への代入、読み取りを valibot でのパースにし(共有の型ファイルは作らない)、
   全ルートの 401 を `test/platform/authentication.spec.ts` の表で一括して見る
 
@@ -68,7 +69,7 @@ todo/
   index.ts
 ```
 
-- Domain は、Repository・Gateway の interface の定義と、Entity の定義、値オブジェクトの定義、ドメインサービスの定義を行う。
+- Domain は、Repository・Gateway の interface と、Entity、値オブジェクト、ドメインサービスを定義する。
   Repository・Gateway の interface の定義では、Entity や値オブジェクトを I/F とする
 - Controller の I/F は contracts で定義する。Usecase を呼ぶ。Usecase を呼び出すときと、レスポンスするときの整形は、
   Controller の内部でインラインに書く
@@ -81,7 +82,7 @@ todo/
 - QueryService の I/F は DTO。DTO は QueryService 内に定義する
 - Repository の I/F は Domain から interface を import して implements する。Entity は Domain に定義し、
   データベースから受け取った値を Entity の from メソッドを呼び出して、Entity にして返す
-- Gateway の I/F は Domain から interface を import して implements する。外部サービスとのやり取りを行う。
+- Gateway の I/F は Domain から interface を import して implements する。外部サービスとやり取りする。
   サンプルの `todo` には無い(メールの送信は Gateway を作らず、Usecase が `MailService` を呼ぶ)
 - メールの件名と本文は、Domain の build 関数で組み立てる(`buildCompletedTodoMail`)。本文は eta のテンプレートにして、
   モジュールの `assets/` に置く(`assets/completed-todo-mail.eta`)。Usecase は build 関数の戻り値を `MailService` に渡す
@@ -92,9 +93,9 @@ todo/
   controller・usecase・query・repository・gateway など、どの役割も同じ
 - Worker は、Usecase を呼ぶ。エラーは throw する
 - `Result` の失敗の型は、役割を問わずメソッドごとに定義する(`completeTodo` なら `CompleteTodoError`、`send` なら `SendMailError`)。
-  そのメソッドで起こる失敗だけを、`type` で見分ける判別共用体で並べ、失敗の種類ごとに必要な値を持たせる
+  そのメソッドで起こる失敗だけを判別共用体に並べて `type` で見分け、失敗の種類ごとに必要な値を持たせる
   (`{ type: 'TodoNotFound', todoId: string }`)。Repository・Gateway の interface のメソッドの失敗の型は Domain に定義する
-- DTO の名前は、読む側が受け取るデータが何かで付ける(todo そのものなら `TodoDto`、一覧の 1 行なら `TodoListItemDto`)。
+- DTO の名前は、読む側の受け取るデータで付ける(todo そのものなら `TodoDto`、一覧の 1 行なら `TodoListItemDto`)。
   用途ごとに名前が分かれるので、同じ役割に DTO が増えても並べられる
 
 ### API のモジュール内の階層構造
@@ -108,7 +109,7 @@ todo/
 
 ### web の構成
 
-- 層は FCIS。Functional Core は `app/utils/`(どこにも依存しない汎用の純関数。必要になったら作る)と `app/domain/`(utils だけに依存)の純関数、
+- 層は FCIS。Functional Core は `app/utils/`(どこにも依存しない汎用の純関数。必要になったら作る)と `app/domain/`(utils だけに依存)の純関数である。
   Imperative Shell は `app/composables/`・`app/pages/`・`app/plugins/`(I/O と状態)、View は `app/components/`・`app/layouts/`(描画に徹する)。
   依存の向きは eslint-plugin-boundaries で強制している
 - 生成された API クライアント(`app/generated/`)を呼ぶのは composables と plugins だけ。生成された型(`types.gen`)はどの層からも import しない。

@@ -34,11 +34,16 @@ jobs:
       node: ${{ steps.filter.outputs.node }}
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
+      text: ${{ steps.filter.outputs.text }}
+      text-files: ${{ steps.filter.outputs.text_files }}
+      text-config: ${{ steps.filter.outputs.text-config }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: filter
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
         with:
+          # lint-text が、PR で変えた Markdown だけを検査できるよう、変更したファイルの一覧を出力させる
+          list-files: json
           # some-with-excludes は、肯定のパターンのどれかに一致し、`!` のパターンのどれにも一致しない
           # ファイルを変更とみなす。既定の some は `!` のパターンも「その glob に一致しない」という
           # 独立した条件として OR で判定するため、`!**/*.md` が .md 以外のすべてのファイルに一致し、
@@ -66,6 +71,15 @@ jobs:
               - *shared
               - 'apps/web/**'
               - 'apps/api/src/**'
+            # 検査しないファイルは .textlintignore に書き、textlint が無視する
+            text:
+              - '**/*.md'
+            text-config:
+              - '.textlintrc.json'
+              - '.textlintignore'
+              - 'prh.yml'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/ci.yml'
 
   # 静的検査: ESLint・型検査・循環 import の検出(全パッケージ)
   check:
@@ -82,6 +96,30 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm depcruise
+
+  # 日本語の文章の検査。textlint はルートの依存なので、ワークスペース全体ではなくルートの依存だけを入れる。
+  # 設定を変えていない PR では、ほかの文書の検査の結果は main と変わらないので、PR で変えた Markdown だけを検査する。
+  # textlint の設定を変えたときは、今までの文書が新しい規則に通るかを確かめるため、pnpm lint:text で対象の文書をすべて検査する
+  lint-text:
+    needs: [changes]
+    if: needs.changes.outputs.text == 'true' || needs.changes.outputs.text-config == 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          # textlint はルートの devDependencies だけで動くので、pnpm/setup には install させず、ルートだけを install する
+          install: false
+          save-cache: false
+      - run: pnpm install --frozen-lockfile --filter myapp
+      - if: needs.changes.outputs.text-config == 'true'
+        run: pnpm lint:text
+      - if: needs.changes.outputs.text-config != 'true'
+        env:
+          FILES: ${{ needs.changes.outputs.text-files }}
+        # 一覧には PR で消したファイルも入るので、存在するファイルだけを渡す
+        run: jq -r '.[]' <<<"$FILES" | while IFS= read -r f; do if [ -f "$f" ]; then printf '%s\n' "$f"; fi; done | xargs -d '\n' -r pnpm exec textlint
 
   # api の単体と結合を 1 回の実行にまとめ、カバレッジを合算して PR にコメントする。
   # 結合の DB は testcontainers が起動するので compose も .env も要らない

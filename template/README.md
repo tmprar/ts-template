@@ -64,6 +64,7 @@ pnpm test              # ユニットテスト(vitest)
 pnpm test:cov          # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを実行し、PR にコメントする)
 pnpm test:integration  # 結合テスト(api は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネントと composable)
 pnpm depcruise         # 循環 import の検出
+pnpm lint:text         # 日本語の文章の検査(textlint)
 pnpm dev               # 開発サーバー(watch)。DB コンテナも起動し、.env.local・.env を注入する
 pnpm compose           # Docker Compose(.env.local・.env を復号して注入する。例: pnpm compose ps / pnpm compose down)
 pnpm db                # drizzle-kit(例: pnpm db generate / pnpm db migrate)

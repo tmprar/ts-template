@@ -44,6 +44,11 @@ pre-commit:
             glob: '**/*.{ts,vue}'
             run: pnpm turbo typecheck
 
+    # 検査しないファイルは .textlintignore に書き、textlint が無視する
+    - name: lint-text
+      glob: '**/*.md'
+      run: pnpm exec textlint {staged_files}
+
 commit-msg:
   jobs:
     - name: commitlint
