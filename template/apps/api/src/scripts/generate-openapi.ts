@@ -1,7 +1,6 @@
 // openapi.json を生成するスクリプト。
-// @nestjs/swagger CLIプラグイン(introspectComments)の変換はnest build時にしか
-// 適用されないため、一緒にビルドされた後の dist/scripts/generate-openapi.js を実行することで動作させる。
-// ビルドはturboのgenerate:openapiタスク(dependsOn: build)が先行して行う
+// @nestjs/swagger CLIプラグイン(introspectComments)の変換はnest build時にしか適用されないため、
+// このスクリプトはTypeScriptのソースのまま実行せず、nest buildが .out/server/ に出力したJavaScriptを実行する
 import type { NestExpressApplication } from '@nestjs/platform-express'
 
 import { NestFactory } from '@nestjs/core'

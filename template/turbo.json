@@ -26,7 +26,7 @@
       "persistent": true
     },
     "@myapp/api#generate:openapi": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
       "outputs": [".out/**"]
     },
     "@myapp/web#nuxt:prepare": {

@@ -11,6 +11,7 @@
   "imports": {
     "#app/*": {
       "types": "./src/*",
+      "openapi": "./.out/server/*",
       "default": "./dist/*"
     },
     "#test/*": {
@@ -24,7 +25,7 @@
     "dev": "nest start --watch --preserveWatchOutput",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "generate:openapi": "node dist/scripts/generate-openapi",
+    "generate:openapi": "nest build -p tsconfig.openapi.json && node --conditions=openapi .out/server/scripts/generate-openapi",
     "db": "drizzle-kit",
     "depcruise": "depcruise src",
     "lint": "eslint . --fix",
