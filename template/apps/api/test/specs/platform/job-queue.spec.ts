@@ -5,8 +5,7 @@ import type { DrizzleAdapter } from '#app/platform/drizzle/index.js'
 
 import { NOTIFY_COMPLETED_TODO_QUEUE } from '#app/modules/todo/job/notify-completed-todo.queue.js'
 import { JobQueueService } from '#app/platform/job/index.js'
-import { useTestApp } from '#test/support/app/create-app.js'
-import { resolveDb } from '#test/support/app/db.js'
+import { useTestApp } from '#test/setup/app.js'
 
 /*
   ジョブの投入は運用の契約で、利用者の振る舞いには現れない。
@@ -21,7 +20,7 @@ describe('ジョブキューの投入', () => {
   const COMMITTED_JOB = '00000000-0000-0000-0000-0000000000ee'
 
   async function findJob(todoId: string): Promise<undefined | { id: string }> {
-    const result = await resolveDb(ctx).execute<{ id: string }>(
+    const result = await ctx.db.execute<{ id: string }>(
       sql`SELECT id FROM pgboss.job WHERE data->>'todoId' = ${todoId}`,
     )
 

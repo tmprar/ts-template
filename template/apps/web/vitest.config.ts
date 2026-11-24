@@ -15,9 +15,9 @@ const coreDirectories = ['app/utils', 'app/features/*/utils']
   設定ファイルの中で最初に現れる `branches: 数字` などを全体のしきい値として読むため
 */
 const globalThresholds = {
-  branches: 20,
-  lines: 20,
-  statements: 20,
+  branches: 65,
+  lines: 80,
+  statements: 75,
 }
 
 /*
@@ -72,13 +72,14 @@ export default defineConfig(async () => ({
           testTimeout: 60_000,
         },
       },
-      // composablesとcomponents。useStateや自動importにNuxtの実行環境が要る
+      // 画面・部品・composable。useStateや自動import、プラグインが用意するQueryClientにNuxtの実行環境が要る
       await defineVitestProject({
         test: {
           environment: 'nuxt',
-          exclude: ['test/eslint/**'],
           globals: true,
-          include: ['test/**/*.spec.ts'],
+          // すべてのテストの前に行う Nuxt のアプリの起動は、テストを並列に実行して負荷が高いと既定の10秒を超えるため、上限を30秒にする
+          hookTimeout: 30_000,
+          include: ['test/nuxt/**/*.spec.ts'],
           name: 'nuxt',
         },
       }),

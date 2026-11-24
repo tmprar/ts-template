@@ -44,8 +44,6 @@ async function resetDb(name: string): Promise<void> {
 const workerDb = `test_worker_${process.env['VITEST_POOL_ID'] ?? '0'}`
 
 process.env['DATABASE_URL'] = databaseUrl(workerDb)
-// todoの完了を知らせる宛先(サンプル)。値は test/support/mails.ts の NOTICE_MAIL_TO と揃える
-process.env['TODO_NOTICE_MAIL_TO'] = 'todo-owner@example.com'
 
 await resetDb(workerDb)
 

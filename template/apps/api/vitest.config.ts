@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 
+import { TEST_ENV } from './test/fixtures/env.js'
+
 /*
   全体のしきい値は、カバレッジが大きく下がったことを止めるために置き、実際の値との間に数ポイントの余裕を残す。
   余裕が無いと、テストの要らない分岐を 1 つ書き足しただけで失敗する。
@@ -55,6 +57,7 @@ export default defineConfig({
         }])),
       },
     },
+    env: TEST_ENV,
     globals: true,
     projects: [
       {
@@ -64,17 +67,17 @@ export default defineConfig({
           name: 'unit',
         },
       },
-      // 結合テストは testcontainers の PostgreSQL を起動し、マイグレーション済みのテンプレートの DB を作る
+      // 結合テストは testcontainers の PostgreSQL を起動し、外部サービスを MSW で受ける
       {
         extends: true,
         test: {
           globalSetup: ['./test/setup/global-setup.ts'],
           // タイムアウトは既定より長くする。フックがコンテナの起動を含むため
           hookTimeout: 120_000,
-          include: ['test/features/**/*.spec.ts', 'test/platform/**/*.spec.ts'],
+          include: ['test/specs/**/*.spec.ts'],
           name: 'integration',
-          // worker ごとにテンプレートから専用の DB を複製し、各テストの前に TRUNCATE する
-          setupFiles: ['./test/setup/setup-db.ts'],
+          // worker ごとに専用の DB を作り、各テストの前に TRUNCATE する
+          setupFiles: ['./test/setup/setup-db.ts', './test/setup/msw.ts'],
         },
       },
     ],

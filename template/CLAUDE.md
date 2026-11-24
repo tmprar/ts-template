@@ -148,7 +148,9 @@ todo/
 
 ### テスト
 
-- web は `app/utils/`・機能の `utils/` の純関数と、主要コンポーネントの単体
+- API の結合テストは `apps/api/test/specs/` に、エンドポイント(`api/<資源>/<操作>.spec.ts`)・ジョブ(`jobs/`)・運用の契約(`platform/`)に分けて置く。
+  前提のデータは `test/factories/` の factory(fishery)で DB に作り、確かめる値は API の応答から読む。外部サービスは MSW(`test/mocks/`)が HTTP の層で受け、ジョブは `useTestApp` の `jobs.drain()` でその場で処理する
+- web は `app/utils/`・機能の `utils/` の純関数を単体で、画面と部品を Nuxt 環境の結合テスト(`apps/web/test/nuxt/specs/`)で確かめる。画面のテストは API の応答を MSW(`test/nuxt/mocks/`)で差し替え、利用者の操作から画面の表示とトーストまでを見る
 - カバレッジは単体と結合を合算して測る。全体と純関数の層のしきい値は各パッケージの `vitest.config.ts`、PR で変更した行のカバレッジの基準は `.github/workflows/ci.yml` にある
 
 ## 作業ルール

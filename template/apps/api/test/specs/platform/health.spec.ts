@@ -1,7 +1,7 @@
 import request from 'supertest'
 
 import { DatabaseHealthIndicator } from '#app/platform/health/database.health.js'
-import { useTestApp } from '#test/support/app/create-app.js'
+import { useTestApp } from '#test/setup/app.js'
 
 describe('稼働状況の確認', () => {
   describe('DBに届いているとき', () => {
