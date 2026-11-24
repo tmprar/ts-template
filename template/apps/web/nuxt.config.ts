@@ -61,6 +61,16 @@ export default defineNuxtConfig({
         types: ['vitest/globals'],
       },
       include: ['../test/**/*'],
+      /*
+        解決できないコンポーネントのタグと、宣言していないprops・イベント・ディレクティブを、型検査のエラーにする。
+        vue-tscの既定では、解決できないタグを実行時に登録されるコンポーネントとみなし、宣言していない属性をfallthroughとみなして報告しない。
+        v-modelの値の型の検査(strictVModel)だけは外す。Nuxt UIの部品は使わない値(UCheckboxの'indeterminate'など)も含めた型で値を返すため、
+        検査するとv-modelを使えず、:model-valueと@update:model-valueに分けて値を変換することになる
+      */
+      vueCompilerOptions: {
+        strictTemplates: true,
+        strictVModel: false,
+      },
     },
   },
 })
