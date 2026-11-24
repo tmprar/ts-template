@@ -1,0 +1,39 @@
+# pnpm のストアのキャッシュを main のスコープに保存する。PR の実行は main のスコープのキャッシュを復元できるが、
+# PR で保存したキャッシュはほかの PR から復元できないため、保存はこのワークフローだけが行い、
+# ほかのワークフローはすべて復元だけにしている(pnpm/setup の save-cache: false)
+name: pnpm-cache
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pnpm-lock.yaml'
+      # Node.js の版を変えたときにもキャッシュを保存し直すよう、package.json を含める。
+      # キャッシュのキーには、package.json の devEngines.runtime で決まる Node.js の版が入る
+      - 'package.json'
+      - '.github/workflows/pnpm-cache.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: pnpm-cache
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # キャッシュのキーは runner のアーキテクチャで分かれ、install の範囲(--filter)では分かれない。
+  # どのアーキテクチャのキャッシュにも、そこで動くどのジョブが必要とするパッケージも入るよう、install の範囲を絞らずすべてを install する。
+  # x64 のキャッシュは ubuntu-slim ではなく通常の x64 runner(ubuntu-24.04)で保存する。キャッシュのキーは OS とアーキテクチャで
+  # 作られ runner の種類を含まないので、ubuntu-slim のジョブも復元できる
+  save:
+    strategy:
+      matrix:
+        runs-on: [ubuntu-24.04-arm, ubuntu-24.04]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          require-lockfile: true
