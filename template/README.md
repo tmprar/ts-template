@@ -63,6 +63,7 @@ pnpm typecheck         # 型検査
 pnpm test              # ユニットテスト(vitest)
 pnpm test:cov          # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを実行し、PR にコメントする)
 pnpm test:integration  # 結合テスト(api は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネントと composable)
+pnpm test:mutation     # ミューテーションテスト(Stryker。api の domain と shared だけ。レポートは apps/api/reports/mutation/)
 pnpm depcruise         # 循環 import の検出
 pnpm lint:text         # 日本語の文章の検査(textlint)
 pnpm dev               # 開発サーバー(watch)。DB コンテナも起動し、.env.local・.env を注入する

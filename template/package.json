@@ -20,6 +20,7 @@
     "test": "turbo test",
     "test:cov": "turbo test:cov",
     "test:integration": "turbo test:integration",
+    "test:mutation": "turbo test:mutation",
     "predev": "pnpm compose up -d --wait --build --remove-orphans",
     "dev": "dotenvx run -f .env.local -f .env -- turbo dev generate:api:watch",
     "predb": "pnpm compose up -d --wait --build --remove-orphans",

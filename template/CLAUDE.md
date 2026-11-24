@@ -24,6 +24,7 @@ pnpm lint       # ESLint(--fix 付き)
 pnpm typecheck
 pnpm test       # vitest(純関数の単体)
 pnpm test:cov   # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを走らせ PR にコメントする)
+pnpm test:mutation  # ミューテーションテスト(Stryker。api の domain と shared だけ。CI では毎週実行する)
 pnpm test:integration  # 結合テスト(API は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネント)
 pnpm depcruise  # 循環 import の検出
 pnpm lint:text  # 日本語の文章の検査(textlint。検査しないファイルは .textlintignore)

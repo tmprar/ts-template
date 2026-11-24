@@ -1,6 +1,9 @@
 import { fileURLToPath } from 'node:url'
 import tsconfigPaths from 'vite-tsconfig-paths'
-import { defineConfig } from 'vitest/config'
+import {
+  defineConfig,
+  type TestProjectConfiguration,
+} from 'vitest/config'
 
 import { TEST_ENV } from './test/fixtures/env.js'
 
@@ -67,19 +70,27 @@ export default defineConfig({
           name: 'unit',
         },
       },
-      // 結合テストは testcontainers の PostgreSQL を起動し、外部サービスを MSW で受ける
-      {
-        extends: true,
-        test: {
-          globalSetup: ['./test/setup/global-setup.ts'],
-          // タイムアウトは既定より長くする。フックがコンテナの起動を含むため
-          hookTimeout: 120_000,
-          include: ['test/specs/**/*.spec.ts'],
-          name: 'integration',
-          // worker ごとに専用の DB を作り、各テストの前に TRUNCATE する
-          setupFiles: ['./test/setup/setup-db.ts', './test/setup/msw.ts'],
-        },
-      },
+      /*
+        ミューテーションテスト(test:mutation が STRYKER=1 を設定する)では、結合の project を読み込まない。Stryker は
+        設定ファイルのパスしか受け取らず、project を選べないので、読み込むとミュータントごとに結合テストが PostgreSQL を起動する
+      */
+      ...(process.env['STRYKER'] === '1'
+        ? []
+        : [
+        // 結合テストは testcontainers の PostgreSQL を起動し、外部サービスを MSW で受ける
+          {
+            extends: true,
+            test: {
+              globalSetup: ['./test/setup/global-setup.ts'],
+              // タイムアウトは既定より長くする。フックがコンテナの起動を含むため
+              hookTimeout: 120_000,
+              include: ['test/specs/**/*.spec.ts'],
+              name: 'integration',
+              // worker ごとに専用の DB を作り、各テストの前に TRUNCATE する
+              setupFiles: ['./test/setup/setup-db.ts', './test/setup/msw.ts'],
+            },
+          },
+        ] satisfies TestProjectConfiguration[]),
     ],
     root: './',
   },
