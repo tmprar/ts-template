@@ -61,6 +61,8 @@ export default withNuxt(
     },
     rules: {
       // Vueコンポーネントの慣習に合わせてPascalCaseを許可する
+      // contracts の createXxxSchema のように、関数ではないスキーマに動詞で始まる名前を付ける命名規約と衝突するため、無効にする
+      ['unicorn/no-non-function-verb-prefix']: 'off',
       ['unicorn/filename-case']: [
         'error',
         {

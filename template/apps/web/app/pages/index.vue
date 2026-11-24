@@ -20,8 +20,8 @@ useHead({ title: 'todo' })
 const { addTodo, completeTodo, isAdding, isPending, removeTodo, todos } = useTodos()
 
 /**
-追加フォームの入力。検証はcontractsのスキーマ(APIの入口と同じもの)で行う
-*/
+ * 追加フォームの入力。検証はcontractsのスキーマ(APIの入口と同じもの)で行う
+ */
 const form = reactive({ title: '' })
 
 const todoCount = computed(() => countTodosByStatus(todos.value ?? []))

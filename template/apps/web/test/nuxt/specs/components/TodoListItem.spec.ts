@@ -5,6 +5,9 @@ import type { TodoItem } from '~/features/todo/utils/todo'
 
 import TodoListItem from '~/features/todo/components/TodoListItem.vue'
 
+/**
+ * `item` を表示する TodoListItem を Nuxt 環境に描画して返す
+ */
 const mount = async (item: TodoItem) =>
   await mountSuspended(TodoListItem, { props: { item } })
 

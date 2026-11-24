@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url'
 // 入力は@myapp/apiがexportsで公開するopenapi.json。ただしhey-apiのwatchはURL入力しか
 // 対応しないため、監視時(generate:api:watch)だけはapi開発サーバーが配信する
 // /openapi.jsonを見る
-// 未生成だと解決に失敗し原因の分かりにくいMODULE_NOT_FOUNDになるため、案内に置き換える
+/**
+ * パッケージ @myapp/api がexportsで公開するopenapi.jsonのファイルパスを返す。
+ * openapi.jsonが未生成で解決に失敗したときは、生成の手順を示す例外を投げる。
+ * 解決の失敗をそのまま投げない。そのままでは原因の分かりにくいMODULE_NOT_FOUNDになる
+ */
 function openApiPath(): string {
   try {
     return fileURLToPath(import.meta.resolve('@myapp/api/openapi.json'))

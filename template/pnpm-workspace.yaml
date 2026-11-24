@@ -8,7 +8,7 @@ allowBuilds:
   cpu-features: false
   esbuild: true
   lefthook: true
-  msw: set this to true or false
+  msw: false
   protobufjs: false
   ssh2: false
   unrs-resolver: false

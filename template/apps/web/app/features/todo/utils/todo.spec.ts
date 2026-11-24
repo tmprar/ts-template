@@ -3,6 +3,9 @@ import {
   type TodoItem,
 } from '~/features/todo/utils/todo'
 
+/**
+ * `id` と `status` の todo を、件名を固定して返す
+ */
 const todo = (id: string, status: TodoItem['status']): TodoItem => ({
   id,
   status,

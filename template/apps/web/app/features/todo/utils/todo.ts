@@ -8,8 +8,8 @@ export type TodoItem = {
 }
 
 /**
-未完了と完了済みの件数
-*/
+ * 未完了と完了済みの件数
+ */
 export const countTodosByStatus = (todos: readonly TodoItem[]) => {
   const done = todos.filter(todo => todo.status === 'completed').length
 
