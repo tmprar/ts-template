@@ -49,6 +49,11 @@ pre-commit:
       glob: '**/*.md'
       run: pnpm exec textlint {staged_files}
 
+    # adrs は pnpm install では入らないため、各自が入れておく(README のセットアップ)。入っていないとコミットが失敗する
+    - name: adr-doctor
+      glob: '{docs/adr/**,.adr-dir}'
+      run: adrs doctor --warnings-as-errors
+
 commit-msg:
   jobs:
     - name: commitlint

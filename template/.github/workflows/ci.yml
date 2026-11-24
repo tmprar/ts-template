@@ -38,6 +38,7 @@ jobs:
       text-files: ${{ steps.filter.outputs.text_files }}
       text-config: ${{ steps.filter.outputs.text-config }}
       diff-coverage-scripts: ${{ steps.filter.outputs.diff-coverage-scripts }}
+      adr: ${{ steps.filter.outputs.adr }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: filter
@@ -75,6 +76,11 @@ jobs:
               - 'apps/web/**'
               - 'apps/api/src/**'
               - '.github/scripts/diff-coverage/**'
+            adr:
+              - 'docs/adr/**'
+              - '.adr-dir'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/install-adrs/**'
             diff-coverage-scripts:
               - '.github/scripts/diff-coverage/**'
               - '.github/workflows/ci.yml'
@@ -254,6 +260,18 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node .github/scripts/diff-coverage/comment.mjs web "$RUNNER_TEMP/diff-coverage.md"
+
+  # ADR の検査(番号の重複・リンク切れ・空の節)。lint に入れず別のジョブにする。lint は docs だけの PR では実行しないため
+  lint-adr:
+    needs: [changes]
+    if: needs.changes.outputs.adr == 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install adrs
+        uses: ./.github/actions/install-adrs
+      # 空の節は warning で、既定では終了コードが 0 になるため、warning でも失敗させる
+      - run: adrs doctor --warnings-as-errors
 
   # 差分のカバレッジのスクリプトの単体テスト(node:test)
   test-diff-coverage-scripts:

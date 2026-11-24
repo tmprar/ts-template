@@ -64,6 +64,11 @@ pre-commit:
       glob: 'template/**/*.md'
       run: pnpm exec textlint {staged_files}
 
+    - name: adr-doctor
+      root: template/
+      glob: '{template/docs/adr/**,template/.adr-dir}'
+      run: adrs doctor --warnings-as-errors
+
 commit-msg:
   jobs:
     - name: commitlint

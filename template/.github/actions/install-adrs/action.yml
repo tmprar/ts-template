@@ -1,0 +1,28 @@
+# adrs のビルド済みの配布物を取得する。adrs は Rust 製で pnpm install では入らず、cargo install ではソースからのビルドが必要になるため。
+# ci.yml の lint-adr と claude-code-review.yml の find・verify が使う。手順を 1 か所に置くのは、
+# 版が呼び出す側ごとに違うと、レビューが読む ADR の一覧と、lint-adr が検査する内容が食い違いうるため
+name: Install adrs
+description: adrs のビルド済みの配布物を取得して PATH に加える
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        ADRS_VERSION: 0.12.1
+        # 配布物の SHA-256。ADRS_VERSION を変えるときは、リリースの .sha256 の値に合わせる
+        ADRS_SHA256_X64: 1e0dda183f38eeff44a6dd82d688df4a0f3a655396fcc72cdbc31de753d88419
+        ADRS_SHA256_ARM64: 4b075927dd313826f92eaa89a2deaf03b495c38d78b72ae9c27a89209bd3b026
+        RUNNER_ARCH: ${{ runner.arch }}
+      run: |
+        case "$RUNNER_ARCH" in
+          X64) target=x86_64-unknown-linux-gnu; ADRS_SHA256=$ADRS_SHA256_X64 ;;
+          ARM64) target=aarch64-unknown-linux-gnu; ADRS_SHA256=$ADRS_SHA256_ARM64 ;;
+          *) echo "adrs の配布物が無いアーキテクチャです: $RUNNER_ARCH" >&2; exit 1 ;;
+        esac
+        archive=adrs-$target.tar.xz
+        curl -fsSL -o "$RUNNER_TEMP/$archive" \
+          "https://github.com/joshrotenberg/adrs/releases/download/v${ADRS_VERSION}/$archive"
+        echo "${ADRS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
+        tar -xJf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/adrs-$target" >> "$GITHUB_PATH"

@@ -4,7 +4,7 @@
 - 作成日:YYYY-MM-DD
 
 テンプレートの時点では、サンプルの `todo` の要件だけを書いてある。自分のプロジェクトの要件に書き換えて使う。
-要件には ID を振り、コミットメッセージと `docs/decisions.md` から参照する(`docs/workflow.md`)。
+要件には ID を振り、コミットメッセージと ADR(`docs/adr/`)から参照する(`docs/workflow.md`)。
 
 ## 1. 背景・目的
 

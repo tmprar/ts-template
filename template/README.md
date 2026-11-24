@@ -23,6 +23,8 @@ pnpm db migrate      # DB コンテナを立ち上げ、テーブルを作る
 pnpm dev             # 開発に必要なコンテナを立ち上げた後、開発サーバーを立ち上げる
 ```
 
+ADR(`docs/adr/`)を作成・変更するには、[adrs](https://github.com/joshrotenberg/adrs) の CLI をインストールしておく。入っていないと、ADR を含むコミットで lefthook の検査が失敗する。
+
 ルートの `.env` は [dotenvx](https://dotenvx.com/) で値を暗号化してコミットしている。復号の鍵 `.env.keys` を既存の開発者から安全な経路で受け取り、ルートに置く。`.env.keys` はコミットしない。値の追加と変更は `pnpm exec dotenvx set <名前> <値>` で行う(暗号化した状態で書き込まれる)。
 
 開発者ごとに異なる値は `.env.local` に `pnpm exec dotenvx set -f .env.local <名前> <値>` で書く。`.env.local` はコミットせず、同じ名前の値は `.env` より優先される。
@@ -111,5 +113,5 @@ pnpm --filter @myapp/api dev
 | --------------------------------------------- | -------------------------------- |
 | AI エージェント向けの指示(規約と作業の進め方) | `CLAUDE.md` / `docs/workflow.md` |
 | 要件定義(要件 ID と実装状況)                  | `docs/requirements.md`           |
-| 判断の記録・要確認事項                        | `docs/decisions.md`              |
+| 判断の記録・要確認事項(ADR。adrs で管理する)  | `docs/adr/`                      |
 | システム構成設計                              | `docs/architecture.md`           |

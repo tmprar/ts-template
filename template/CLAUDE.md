@@ -158,8 +158,8 @@ todo/
 
 @docs/workflow.md
 
-上記に加え、判断が必要な場面では `docs/requirements.md`(要件 ID と実装状況はここが正)を
-参照して決め、結果を `docs/decisions.md` に追記すること。
+上記に加え、判断が必要な場面では `docs/requirements.md`(要件 ID と実装状況はここが正)と `docs/adr/` の ADR を
+参照して決め、結果を ADR に記録すること(`docs/workflow.md` の「判断の記録」)。
 
 ## やらないこと
 
@@ -168,14 +168,14 @@ todo/
 - PR は squash マージで取り込む。ブランチは必ず main から切り、他の PR のブランチから派生させない
   (先行 PR の squash 後に衝突する)。手順は `docs/workflow.md`
 - 見た目に関わる変更は、自分でブラウザを開いて確認する。デザインカンプを `docs/design/` に置いている場合は、それを正として突き合わせる。
-  `docs/decisions.md` に残すのは、突き合わせても決められず人間の判断が要る点だけ
+  ADR の「要確認」に残すのは、突き合わせても決められず人間の判断が要る点だけ
 
 ## ドキュメント
 
 | 用途 | 場所 |
 | --- | --- |
 | 要件定義(要件 ID と実装状況はここが正) | `docs/requirements.md` |
-| 判断の記録・要確認事項 | `docs/decisions.md` |
+| 判断の記録・要確認事項(ADR。adrs で管理する) | `docs/adr/` |
 | 作業の進め方 | `docs/workflow.md` |
 | システム構成設計 | `docs/architecture.md` |
 | セットアップ・コマンド | `README.md` |

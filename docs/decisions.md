@@ -1,7 +1,8 @@
 # 判断の記録
 
 テンプレート(このリポジトリ)の保守で決めたことと、人間に確認してほしいことを時系列で追記する。
-書式は `template/docs/workflow.md` の「docs/decisions.md の書式」に従う。作ったプロジェクトの判断は、そのプロジェクトの `docs/decisions.md` に書く。
+見出しは `## YYYY-MM-DD <主題>` にし、その下に「決定:」「理由:」「要確認:」で始まる箇条を並べる。「要確認」に書くのは、資料を読み突き合わせても決められず、人間の判断が要る点だけにする。
+作ったプロジェクトの判断は、そのプロジェクトの `docs/adr/` に ADR として記録する(`template/docs/workflow.md` の「判断の記録」)。
 
 ## 2026-10-03 テンプレートを template/ に置き、npx でリポジトリを指定して作る
 - 決定: create-vite と同じく、ルートを CLI のパッケージ、テンプレートの中身を `template/` にする。利用者は `npx github:tmprar/ts-template#release` で起動し、対話に答えると、写す・書き換える・`.env` を作る・`git init`・`pnpm install`・`pnpm lint` までを済ませる。giget による取得、`--template`、`--in-place`(GitHub の template repository として使う形)はやめる
@@ -43,3 +44,10 @@
 - 決定: 取得と更新は TanStack Query で書き、生成するクライアントを hey-api の axios 版と `@tanstack/vue-query` プラグインにする。更新の失敗は `Result` で返さず、`onError` でトーストを出す。web の依存から neverthrow を外し、`docs/workflow.md` の採用済みのスタックに TanStack Query と axios を加える
 - 決定: 取得し直しに失敗しても、前に取得した一覧を表示し続ける。読み込めなかった案内は、最初の取得に失敗して一覧が無いときだけ出す
 - 要確認: 確認中に、DB を止めると API のプロセスが落ちることが分かった。`pg.Pool` に `error` の listener が無く、DB が接続を切ったときの `error` イベントが未処理の例外になる。akitoki も同じ作りで、今回の取り込みの範囲外なので直していない
+
+## 2026-11-24 作ったプロジェクトの判断の記録を ADR にし、E2E と infra の取り込みを見送る
+- 決定: 開発者の指示により、作ったプロジェクトの判断の記録を `docs/decisions.md` から `docs/adr/` の ADR(adrs で管理)に移す。規則は akitoki の `docs/workflow.md` の「判断の記録」「未確認の判断の確認」を写し、lefthook と CI(`lint-adr`)で `adrs doctor --warnings-as-errors` を実行する。ADR 1 と、ADR を使う判断の ADR 2 をテンプレートに置く
+- 決定: このリポジトリ(テンプレートの保守)の判断は、引き続きルートの `docs/decisions.md` に書く。書式はこのファイルの冒頭に書いた
+- 決定: 開発者の指示により、akitoki のブラウザの E2E(`e2e`・`@e2e-dev/web` による AI エージェント型)は取り込まない
+- 決定: 開発者の指示により、infra の PR の cdk diff・deploy.yml・デプロイ用のロールの制限は取り込まない。テンプレートの `AppStack` が空で、akitoki の仕組みは akitoki の構成(EC2・CloudFront・ECR)を前提にしているため
+- 決定: akitoki の `pnpm-workspace.yaml` の `minimumReleaseAge` は取り込まない。いまの lockfile の 33 件(公開から 3 日経っていない TanStack Query・textlint など)が違反し、install が失敗するため
