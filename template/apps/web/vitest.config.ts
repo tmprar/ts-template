@@ -81,6 +81,7 @@ export default defineConfig(async () => ({
           hookTimeout: 30_000,
           include: ['test/nuxt/**/*.spec.ts'],
           name: 'nuxt',
+          setupFiles: ['test/nuxt/setup.ts'],
         },
       }),
     ],

@@ -23,6 +23,8 @@
     "@myapp/contracts": "workspace:*",
     "@nuxt/ui": "~4.11.1",
     "@tanstack/vue-query": "~5.108.3",
+    "@vueuse/core": "~15.0.0",
+    "@vueuse/nuxt": "~15.0.0",
     "axios": "~1.21.1",
     "nuxt": "^4.5.2",
     "vue": "^3.5.42",

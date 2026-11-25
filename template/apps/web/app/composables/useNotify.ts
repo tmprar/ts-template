@@ -22,5 +22,27 @@ export const useNotify = () => {
         title: message,
       })
     },
+    /**
+     * 利用者に操作を促す案内(`message`)を、操作のボタン(`action`)と合わせて表示する。案内は利用者が閉じるか操作するまで残る
+     */
+    prompt: (message: string, action: {
+      label: string
+      onClick: () => void
+    }) => {
+      toast.add({
+        // アプリの配色にinfoの青で塗ったボタンは無いので、操作のボタンはNuxt UIの既定(トーストと同じ色で塗る)にせず、案内(Alert)に置く副次のボタンと同じ見た目にする
+        actions: [{
+          ...action,
+          color: 'neutral',
+          size: 'sm',
+          variant: 'outline',
+        }],
+        color: 'info',
+        duration: 0,
+        icon: 'i-lucide-info',
+        id: message,
+        title: message,
+      })
+    },
   }
 }

@@ -38,11 +38,15 @@ export default defineNuxtConfig({
       },
     },
   },
+  experimental: {
+    // 開いたままのタブが古いビルドで動き続ける時間を短くするため、Nuxtの既定の1時間より短い10分おきに新しいビルドを確かめる
+    checkOutdatedBuildInterval: 600_000,
+  },
   // 自作の composable と関数は自動 import の対象にせず、使うファイルが import する
   imports: {
     scan: false,
   },
-  modules: ['@nuxt/eslint', '@nuxt/ui'],
+  modules: ['@nuxt/eslint', '@nuxt/ui', '@vueuse/nuxt'],
   runtimeConfig: {
     public: {
       // APIの接続先。NUXT_PUBLIC_API_BASE_URLで上書きできる
