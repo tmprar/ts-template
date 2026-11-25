@@ -57,3 +57,9 @@
 - 決定: `@tanstack/vue-query` と `@tanstack/eslint-plugin-query` は、akitoki の `~5.108.0` に下げず、template の `~5.108.3` のままにする
 - 決定: akitoki(#177)と同じく `vue-tsc` を `3.3.13` に固定し、Renovate の `allowedVersions` を `<3.3.14` にする。3.3.14 には、ref でない変数にもテンプレートの中で `.value` を足して型付けする不具合(vuejs/language-tools#6364)がある。作ったプロジェクトでも、同じ書き方をすると型検査に失敗する。直った版が出たら、規則を消して `~` に戻す
 - 決定: web の `Result` 型、API の `UrlBuilder`、`useMutationProgress` と `withSetup` は取り込まない。akitoki でも、特定の機能(調整リンクのフォーム、Google Calendar の gateway、設定画面の保存の表示)からだけ使っており、template に使う場所が無い
+
+## 2026-11-25 更新のあとの取得し直しを、成功したときだけにする
+- 決定: 開発者の指示により、`meta.invalidates` の取得し直しを MutationCache の `onSettled` から `onSuccess` に移す。TanStack Query の公式ガイド(Invalidations from Mutations)と、`meta.invalidates` の形を紹介した TkDodo の記事・GitHub の議論(#7324)は、どれも `onSuccess` で取得し直している。公式の楽観的更新のガイドが `onSettled` を使うのは、失敗したときに書き換えた画面を戻すためで、楽観的更新をしない template には当てはまらない
+- 理由: 失敗したときも取得し直して待つと、APIの不具合や通信の失敗では取得し直しも失敗し、その再試行(最大 3 回、1・2・4 秒の間隔)が終わるまで、失敗のトーストが出たあとも操作のボタンが押せなかった
+- 決定: ほかの画面での変更で一覧が古かったことを示すエラー(`TODO_ALREADY_COMPLETED`・`TODO_NOT_FOUND`)のときだけ、そのエラーを扱う `onError` で取得し直す
+- 要確認: akitoki の `plugins/vue-query.ts` も `onSettled` で取得し直しており、同じことが起きる。akitoki は直していない

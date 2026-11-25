@@ -1,6 +1,7 @@
 import {
   useMutation,
   useQuery,
+  useQueryClient,
 } from '@tanstack/vue-query'
 
 import { useNotify } from '~/composables/useNotify'
@@ -14,14 +15,24 @@ import { asMutationOptions } from '~/utils/generated-options'
 
 /**
  * todoの一覧を取得して`todos`として返し、todoを追加・完了・削除する関数を返す。
- * 更新が終わると、成否を問わず一覧を取得し直す(`meta.invalidates`)
+ * 更新が成功すると、一覧を取得し直す(`meta.invalidates`)。
+ * 失敗したときは、ほかの画面で完了・削除されていて一覧が古かったとき(`TODO_ALREADY_COMPLETED`・`TODO_NOT_FOUND`)だけ取得し直す
  */
 export const useTodos = () => {
   const todosOptions = todoControllerFindManyOptions()
 
   const todosQuery = useQuery(todosOptions)
 
+  const queryClient = useQueryClient()
+
   const notify = useNotify()
+
+  /**
+   * 一覧を取得し直し、終わるまで待つ。更新の成功のときと同じく、取得し直した一覧が画面に出るまで更新をpendingのままにする
+   */
+  const refetchTodos = async () => {
+    await queryClient.invalidateQueries({ queryKey: todosOptions.queryKey })
+  }
 
   const creation = useMutation({
     ...asMutationOptions(todoControllerCreateMutation()),
@@ -36,7 +47,7 @@ export const useTodos = () => {
   const completion = useMutation({
     ...asMutationOptions(todoControllerCompleteMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
-    onError: (error) => {
+    onError: async (error) => {
       if (error.response === undefined) {
         notify.error('通信に失敗したため、todoを完了にできませんでした。通信状況をご確認のうえ、もう一度お試しください。')
 
@@ -46,10 +57,12 @@ export const useTodos = () => {
       switch (error.response.data.code) {
         case 'TODO_ALREADY_COMPLETED': {
           notify.error('このtodoはすでに完了しています。')
+          await refetchTodos()
           break
         }
         case 'TODO_NOT_FOUND': {
           notify.error('このtodoはすでに削除されています。')
+          await refetchTodos()
           break
         }
         default: {
@@ -62,16 +75,21 @@ export const useTodos = () => {
   const removal = useMutation({
     ...asMutationOptions(todoControllerRemoveMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
-    onError: (error) => {
+    onError: async (error) => {
       if (error.response === undefined) {
         notify.error('通信に失敗したため、todoを削除できませんでした。通信状況をご確認のうえ、もう一度お試しください。')
 
         return
       }
 
-      notify.error(error.response.data.code === 'TODO_NOT_FOUND'
-        ? 'このtodoはすでに削除されています。'
-        : 'todoを削除できませんでした。しばらくしてからもう一度お試しください。')
+      if (error.response.data.code === 'TODO_NOT_FOUND') {
+        notify.error('このtodoはすでに削除されています。')
+        await refetchTodos()
+
+        return
+      }
+
+      notify.error('todoを削除できませんでした。しばらくしてからもう一度お試しください。')
     },
   })
 

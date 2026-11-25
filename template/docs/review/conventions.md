@@ -61,7 +61,7 @@
   `…Mutation()` の戻り値をスプレッドするときに `asMutationOptions` を通している
 - 更新の失敗を `useMutation` のオプションの `onError` で受けてトーストで伝え、接続の失敗を `error.response` の有無で見分け、原因を `error.response.data.code` で分けている。HTTP ステータスや `message` で分岐していない
 - 更新の失敗の案内の文言を `onError` の中で決め、`useNotify` の `error` でトーストに表示している。取得の失敗を画面に残す案内は、`error` から `computed` で導き、`ref` に代入していない
-- 更新のあとに取得し直す取得を `useMutation` の `meta.invalidates` に書いている(`onSettled` などで `invalidateQueries` を直接呼んでいない)
+- 更新が成功したあとに取得し直す取得を `useMutation` の `meta.invalidates` に書いている(`onSuccess` などで `invalidateQueries` を直接呼んでいない)。失敗したときに取得し直すのは、一覧が古かったことを示すエラーを扱う `onError` だけになっている
 - composable が `mutate` を操作の名前で返し、画面に固有の後処理を、画面が `mutate` の第 2 引数のコールバックに書いている
 - 機能の composable が、API を呼ぶかどうかを問わず `composables/` に、純粋関数と型が `utils/` に置かれている
 - 複数の機能を使う処理が `app/pages/` のルートに書かれている。機能の composable が別の機能の値を使うときは、ルートが引数で渡している

@@ -4,7 +4,6 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { findShownToasts } from '~~/test/nuxt/helpers/toasts'
 import {
   disconnectRequest,
-  holdRequest,
   rejectRequest,
 } from '~~/test/nuxt/mocks/handlers/errors'
 import {
@@ -146,18 +145,20 @@ describe('利用者がtodoを追加する', () => {
       expect((page.find('input').element as HTMLInputElement).value).toBe('牛乳を買う')
     })
 
-    it('一覧を取得し直すのを待たずに、追加のボタンを押せる状態に戻す', async () => {
-      serveTodos([])
+    it('一覧を取得し直さずに、追加のボタンを押せる状態に戻す', async () => {
+      let fetchCount = 0
+
+      server.use(http.get('*/api/todos', () => {
+        fetchCount += 1
+
+        return HttpResponse.json<TodoControllerFindManyResponse>({ todos: [] })
+      }))
+      disconnectRequest('post', '/api/todos')
       const page = await mountSuspended(IndexPage, { route: '/' })
 
       await vi.waitFor(() => {
-        expect(page.text()).toContain('未完了 0 件 / 完了 0 件')
+        expect(page.text()).toContain('まだtodoがありません。')
       })
-      disconnectRequest('post', '/api/todos')
-      // 失敗のあとの取得し直しを応答させずに待たせ、取得し直しが終わらないうちの表示を見る
-      const releaseRefetch = holdRequest('get', '/api/todos')
-
-      onTestFinished(releaseRefetch)
       await page.find('input').setValue('牛乳を買う')
       await page.find('form').trigger('submit')
 
@@ -167,6 +168,7 @@ describe('利用者がtodoを追加する', () => {
       await vi.waitFor(() => {
         expect(page.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
       })
+      expect(fetchCount).toBe(1)
     })
   })
 })
@@ -201,16 +203,22 @@ describe('利用者がtodoを完了にする', () => {
   })
 
   describe('すでに完了しているtodoだったとき', () => {
-    it('すでに完了していることを、トーストで伝える', async () => {
+    it('すでに完了していることをトーストで伝え、取得し直した一覧を表示する', async () => {
       const todo = openTodo('00000000-0000-4000-8000-000000000001', '牛乳を買う')
+      const setTodos = serveTodos([todo])
 
-      serveTodos([todo])
       rejectRequest('post', `/api/todos/${todo.id}/complete`, 409, 'TODO_ALREADY_COMPLETED')
       const page = await mountSuspended(IndexPage, { route: '/' })
 
       await vi.waitFor(() => {
         expect(shownTitles(page)).toEqual(['牛乳を買う'])
       })
+      // ほかの画面で完了にされていた状態にする
+      setTodos([{
+        ...todo,
+        completedAt: '2026-01-02T00:00:00.000Z',
+        status: 'completed',
+      }])
       await page.find('li button').trigger('click')
 
       await vi.waitFor(() => {
@@ -218,6 +226,9 @@ describe('利用者がtodoを完了にする', () => {
           duration: 0,
           title: 'このtodoはすでに完了しています。',
         }])
+      })
+      await vi.waitFor(() => {
+        expect(page.text()).toContain('未完了 0 件 / 完了 1 件')
       })
     })
   })
@@ -270,16 +281,18 @@ describe('利用者がtodoを削除する', () => {
   })
 
   describe('すでに削除されたtodoだったとき', () => {
-    it('すでに削除されていることを、トーストで伝える', async () => {
+    it('すでに削除されていることをトーストで伝え、取得し直した一覧から消す', async () => {
       const todo = openTodo('00000000-0000-4000-8000-000000000001', '牛乳を買う')
+      const setTodos = serveTodos([todo])
 
-      serveTodos([todo])
       rejectRequest('delete', `/api/todos/${todo.id}`, 404, 'TODO_NOT_FOUND')
       const page = await mountSuspended(IndexPage, { route: '/' })
 
       await vi.waitFor(() => {
         expect(shownTitles(page)).toEqual(['牛乳を買う'])
       })
+      // ほかの画面で削除されていた状態にする
+      setTodos([])
       await page.find('button[aria-label="「牛乳を買う」を削除"]').trigger('click')
 
       await vi.waitFor(() => {
@@ -287,6 +300,9 @@ describe('利用者がtodoを削除する', () => {
           duration: 0,
           title: 'このtodoはすでに削除されています。',
         }])
+      })
+      await vi.waitFor(() => {
+        expect(page.text()).toContain('まだtodoがありません。')
       })
     })
   })

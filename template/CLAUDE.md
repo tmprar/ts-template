@@ -188,7 +188,8 @@ todo/
 - API の取得と更新は TanStack Query(`@tanstack/vue-query`)で、機能の `composables/` の composable の中に書く。`useAsyncData` は使わない。
   `queryKey` と取得・更新の関数は手で書かず、生成された `…Options()` / `…Mutation()`(`app/generated/api/@tanstack/vue-query.gen.ts`)を渡す。`…Mutation()` の戻り値をスプレッドするときは `asMutationOptions` を通す
 - 取得結果は、購読する画面が無くなったらキャッシュから削除する(`plugins/vue-query.ts` で QueryClient の既定の `gcTime` を 0 にしている)
-- 更新のあとに取得し直す取得は、`useMutation` の `meta.invalidates` に queryKey で書く。取得し直す処理は `plugins/vue-query.ts` の MutationCache の `onSettled` にだけ置く
+- 更新が成功したあとに取得し直す取得は、`useMutation` の `meta.invalidates` に queryKey で書く。取得し直す処理は `plugins/vue-query.ts` の MutationCache の `onSuccess` に置く。
+  失敗したときは取得し直さない。ほかの画面での変更で一覧が古かったことを示すエラー(`TODO_NOT_FOUND` など)のときだけ、そのエラーを扱う `onError` で取得し直す
 - 更新の失敗は `useMutation` の `onError` で `useNotify` の `error` を呼び、トーストで伝える。失敗は生成クライアント(hey-api の axios クライアント)が `AxiosError` で型付けする。接続の失敗は `error.response` が無いことで見分け、原因は `error.response.data.code` で分ける
 - composable は `useMutation` の `mutate` を操作の名前(`addTodo`)で返す。画面に固有の後処理(入力欄を空にするなど)は、画面が `mutate` の第 2 引数のコールバックに書く
 - 相対 import は使わない(`~` / `#shared` / `#server` のエイリアス)

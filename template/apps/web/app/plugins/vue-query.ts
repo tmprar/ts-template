@@ -21,8 +21,9 @@ declare module '@tanstack/vue-query' {
   interface Register {
     mutationMeta: {
       /**
-       * 更新が終わったあとに、成功・失敗を問わず取得し直す取得のqueryKey。前方一致で照合する。
-       * 失敗したときも取得し直すのは、失敗の原因が、ほかの画面での変更でありうるためである
+       * 更新が成功したあとに取得し直す取得のqueryKey。前方一致で照合する。
+       * 失敗したときは取得し直さない。更新していない画面の値は変わっておらず、APIの不具合や通信の失敗では、取得し直しも同じ理由で失敗するためである。
+       * ほかの画面での変更が原因で失敗した(一覧が古かった)ときは、そのエラーを扱う更新のonErrorで取得し直す
        */
       invalidates?: readonly QueryKey[]
     }
@@ -31,27 +32,21 @@ declare module '@tanstack/vue-query' {
 
 export default defineNuxtPlugin((nuxtApp) => {
   /*
-    更新が成功したときは、取得し直すのが終わるまで待つ。待つあいだは更新がpendingのままになり、保存の状態の表示が、
-    取得し直した値が画面に出るまで「保存中」のままになる。
-    失敗したときは、取得し直しを始めるだけで待たない。失敗はトーストですぐに伝わり、取得し直した値を待って見せるものが無い。
-    待つと、取得し直しの失敗の再試行(最大3回、1・2・4秒の間隔)や応答の時間切れが終わるまで、操作のボタンが「保存中」のまま押せなくなる
+    取得し直すのが終わるまで待つ。待つあいだは更新がpendingのままになり、保存の状態の表示が、
+    取得し直した値が画面に出るまで「保存中」のままになる
   */
   const mutationCache = new MutationCache({
-    onSettled: async (_data, error, _variables, _context, mutation) => {
+    onSuccess: async (_data, _variables, _context, mutation) => {
       const queryKeys = mutation.meta?.invalidates ?? []
 
       /*
         取得し直す前に、途中の取得を取り消す。データがまだ無い取得の途中で取得し直しを求めると、TanStack Query は
         新しい要求を送らずに途中の取得の結果を使うため、更新の前に送った要求の結果が表示され、更新が画面に出ない
       */
-      const refetching = Promise.all(queryKeys.map(async (queryKey) => {
+      await Promise.all(queryKeys.map(async (queryKey) => {
         await queryClient.cancelQueries({ queryKey })
         await queryClient.invalidateQueries({ queryKey })
       }))
-
-      if (error === null) {
-        await refetching
-      }
     },
   })
 
