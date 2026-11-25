@@ -298,9 +298,10 @@ export default withNuxt(
   {
     /*
       composablesはNuxtの慣習に合わせてcamelCase(useFoo.ts)とする。
-      kebab-caseも許可する。このルールはディレクトリ名も検査し、機能のディレクトリ名はkebab-caseである
+      kebab-caseも許可する。このルールはディレクトリ名も検査し、機能のディレクトリ名はkebab-caseである。
+      composableのspecも、実装のファイル名から辿れるよう、useFoo.spec.tsのように実装と同じ名前にできるようにする
     */
-    files: ['app/composables/*.ts', 'app/features/*/composables/*.ts'],
+    files: ['app/composables/*.ts', 'app/features/*/composables/*.ts', 'test/nuxt/specs/composables/*.ts'],
     rules: {
       ['unicorn/filename-case']: [
         'error',
