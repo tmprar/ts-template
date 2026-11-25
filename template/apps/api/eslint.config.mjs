@@ -106,18 +106,19 @@ export default tseslint.config(
       ],
       /*
         モジュール内の役割。要素(modules/・platform/)とは独立の次元として分類し、
-        役割どうしの呼び出しの向きを boundaries/dependencies のポリシーで表す
+        役割どうしの呼び出しの向きを boundaries/dependencies のポリシーで表す。
+        パターンは src/modules の下に限り、モジュールの外(platform・test)のファイルは、接尾辞が同じでも役割として扱わない
       */
       ['boundaries/files']: [
-        { category: 'domain', pattern: '**/*.domain.ts' },
-        { category: 'controller', pattern: '**/*.controller.ts' },
-        { category: 'facade', pattern: '**/*.facade.ts' },
-        { category: 'usecase', pattern: '**/*.usecase.ts' },
-        { category: 'query', pattern: '**/*.query.ts' },
-        { category: 'repository', pattern: '**/*.repository.ts' },
-        { category: 'gateway', pattern: '**/*.gateway.ts' },
-        { category: 'queue', pattern: '**/*.queue.ts' },
-        { category: 'worker', pattern: '**/*.worker.ts' },
+        { category: 'domain', pattern: 'src/modules/**/*.domain.ts' },
+        { category: 'controller', pattern: 'src/modules/**/*.controller.ts' },
+        { category: 'facade', pattern: 'src/modules/**/*.facade.ts' },
+        { category: 'usecase', pattern: 'src/modules/**/*.usecase.ts' },
+        { category: 'query', pattern: 'src/modules/**/*.query.ts' },
+        { category: 'repository', pattern: 'src/modules/**/*.repository.ts' },
+        { category: 'gateway', pattern: 'src/modules/**/*.gateway.ts' },
+        { category: 'queue', pattern: 'src/modules/**/*.queue.ts' },
+        { category: 'worker', pattern: 'src/modules/**/*.worker.ts' },
       ],
       // node_modules内の偶然の src/modules/* パス一致を要素扱いしない
       ['boundaries/ignore']: ['**/node_modules/**'],
@@ -302,12 +303,12 @@ export default tseslint.config(
               disallow: {
                 to: {
                   file: {
-                    categories: { anyOf: ['controller', 'facade', 'worker'] },
+                    categories: { anyOf: ['controller', 'facade', 'worker', 'usecase'] },
                   },
                 },
               },
               from: { file: { categories: 'usecase' } },
-              message: 'usecase は query・repository・gateway・queue・domain を呼ぶ(上の層へは依存しない)',
+              message: 'usecase は query・repository・gateway・queue・domain を呼ぶ(上の層にも、ほかの usecase にも依存しない)',
             },
             {
               disallow: {
@@ -359,13 +360,13 @@ export default tseslint.config(
                 to: {
                   file: {
                     categories: {
-                      anyOf: ['controller', 'facade', 'query', 'repository', 'gateway', 'domain'],
+                      anyOf: ['controller', 'facade', 'worker', 'query', 'repository', 'gateway', 'domain'],
                     },
                   },
                 },
               },
               from: { file: { categories: 'worker' } },
-              message: 'worker は usecase を呼ぶ',
+              message: 'worker は usecase を呼ぶ(ほかの worker にも依存しない)',
             },
             /*
               テーブル定義に触れるのは永続化に関わる役割だけに限る。

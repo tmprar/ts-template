@@ -8,8 +8,9 @@ export default {
     {
       comment:
         'モジュール間の循環を禁止する。依存の向きは設計判断としてレビューで見るが、'
-        + '循環に至ったものはここで落とす',
-      from: {},
+        + '循環に至ったものはここで落とす。モジュールの中の役割のディレクトリどうし'
+        + '(job の worker → usecase → job の queue など)は層の向きを ESLint が見るため対象外',
+      from: { pathNot: '^src/modules/[^/]+/.+' },
       name: 'no-module-circular',
       scope: 'folder',
       severity: 'error',
