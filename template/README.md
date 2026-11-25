@@ -83,7 +83,7 @@ pnpm db                # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 pnpm --filter @myapp/api dev
 ```
 
-`--filter` で直接実行すると、ルートの `.env.local`・`.env` の注入も DB コンテナの起動も行われない。通常はルートの `pnpm dev` を使う。
+`--filter` で直接実行すると、ルートの `.env.local`・`.env` の注入も DB コンテナの起動も行われない。通常はルートの `pnpm dev` を使う。API は必須の環境変数が無いと起動時の検証で止まるので、`--filter` で起動するときは環境変数を自分で渡す。
 
 ## 最初にやること
 

@@ -79,8 +79,9 @@ export default tseslint.config(
     },
   },
   {
-    // instrument.tsはNestより先に走るため、ここだけenv.schemaで検証してprocess.envを読む
-    files: ['src/instrument.ts'],
+    // instrument.ts は Nest より先に実行されるため、AppConfigService を経由せずに process.env を env.schema で検証して読む
+    // generate-openapi.ts も process.env を直接扱う。アプリを import する前に、設定されていない必須の環境変数に、生成では使われない仮の値を置くため
+    files: ['src/instrument.ts', 'src/scripts/generate-openapi.ts'],
     rules: {
       ['n/no-process-env']: 'off',
     },

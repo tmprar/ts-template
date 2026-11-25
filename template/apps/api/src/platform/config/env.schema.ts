@@ -13,21 +13,19 @@ const emptyStringAsUndefined = v.optional(
 )
 
 // デフォルト値は開発・テスト用。production では実値を必ず設定すること
+/*
+  本番で設定し忘れると危うい値(接続先、実行環境、CORS で許すオリジン)には既定値を置かず、欠けていれば起動時の検証で止める。
+  既定値を置くと、本番で設定し忘れても起動し、開発の接続先や development の振る舞いのまま動くため。開発の値はルートの .env に置く
+*/
 export const envSchema = v.pipe(
   v.object({
-    DATABASE_URL: v.optional(
-      v.pipe(v.string(), v.nonEmpty()),
-      'postgresql://postgres:postgres@localhost:5432/myapp',
-    ),
+    DATABASE_URL: v.pipe(v.string(), v.nonEmpty()),
     /*
       通知メールの差出人。「表示名 <address>」形式も可。
       RESEND_API_KEY と揃って初めて送信できるため、開発の既定値は置かない
     */
     MAIL_FROM: emptyStringAsUndefined,
-    NODE_ENV: v.optional(
-      v.picklist(['development', 'test', 'production']),
-      'development',
-    ),
+    NODE_ENV: v.picklist(['development', 'test', 'production']),
     PORT: v.optional(
       v.pipe(
         v.string(),
@@ -52,10 +50,7 @@ export const envSchema = v.pipe(
       認証を入れたら、設定ではなく利用者のアドレスへ送るように置き換える
     */
     TODO_NOTICE_MAIL_TO: emptyStringAsUndefined,
-    WEB_APP_ORIGIN: v.optional(
-      v.pipe(v.string(), v.url()),
-      'http://localhost:5173',
-    ),
+    WEB_APP_ORIGIN: v.pipe(v.string(), v.url()),
   }),
   /*
     本番で通知の設定が欠けたまま起動すると、送信が黙って見送られメールが届かなくなる。

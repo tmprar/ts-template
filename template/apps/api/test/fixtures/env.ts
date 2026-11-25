@@ -9,4 +9,6 @@ export const TEST_ENV = {
   RESEND_API_KEY: 'test-resend-api-key',
   // todo の完了を知らせる宛先(サンプル)
   TODO_NOTICE_MAIL_TO: 'todo-owner@example.com',
+  // NODE_ENV は vitest が test に設定するので置かない
+  WEB_APP_ORIGIN: 'http://localhost:5173',
 }

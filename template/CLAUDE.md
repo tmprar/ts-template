@@ -38,7 +38,7 @@ pnpm db         # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 ## 前提
 
 - 開発環境はルート駆動。環境変数はルートの `.env.local`・`.env` を `dotenvx run` で注入し、パッケージ側から外を参照しない。`.env` は値を dotenvx で暗号化してコミットし、開発者ごとに異なる値は `.env.local`(コミットしない)に書く。復号の鍵 `.env.keys` はコミットしない
-- API では `process.env` を直接読まない。`apps/api/src/platform/config/env.schema.ts` に追加し、`AppConfigService` 経由で参照する。例外は Nest より先に走る `src/instrument.ts`(Sentry)だけで、そこも同じスキーマで検証して読む
+- API では `process.env` を直接読まない。`apps/api/src/platform/config/env.schema.ts` に追加し、`AppConfigService` 経由で参照する。例外は、Nest より先に実行される `src/instrument.ts`(Sentry。同じスキーマで検証して読む)と、アプリを import する前に、設定されていない必須の環境変数に、生成では使われない仮の値を置く `src/scripts/generate-openapi.ts`(OpenAPI の生成)の 2 つ
 - `@nestjs/config` の `validationSchema` は Standard Schema 対応。valibot をそのまま渡している
 - `apps/api` の import は `#app/*` / `#test/*` のサブパス(`package.json` の `imports`)。相対 import は ESLint で禁止している
 - web の API クライアントは `apps/api` の OpenAPI から生成する(`app/generated/api/`)。手で書かない
