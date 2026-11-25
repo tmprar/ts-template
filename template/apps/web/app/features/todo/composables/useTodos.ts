@@ -13,15 +13,6 @@ import {
 import { asMutationOptions } from '~/utils/generated-options'
 
 /**
- * 失敗の原因を、通信の失敗とAPIの失敗に分けて案内する文言を返す。
- * 接続の失敗は、axiosの例外に応答(`response`)が無いことで見分ける
- */
-const failureMessage = (error: { response?: unknown }, action: string) =>
-  error.response === undefined
-    ? `通信に失敗したため、todoを${action}できませんでした。通信状況をご確認のうえ、もう一度お試しください。`
-    : `todoを${action}できませんでした。しばらくしてからもう一度お試しください。`
-
-/**
  * todoの一覧を取得して`todos`として返し、todoを追加・完了・削除する関数を返す。
  * 更新が終わると、成否を問わず一覧を取得し直す(`meta.invalidates`)
  */
@@ -36,7 +27,9 @@ export const useTodos = () => {
     ...asMutationOptions(todoControllerCreateMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
     onError: (error) => {
-      notify.error(failureMessage(error, '追加'))
+      notify.error(error.response === undefined
+        ? '通信に失敗したため、todoを追加できませんでした。通信状況をご確認のうえ、もう一度お試しください。'
+        : 'todoを追加できませんでした。しばらくしてからもう一度お試しください。')
     },
   })
 
@@ -44,7 +37,9 @@ export const useTodos = () => {
     ...asMutationOptions(todoControllerCompleteMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
     onError: (error) => {
-      notify.error(failureMessage(error, '完了に'))
+      notify.error(error.response === undefined
+        ? '通信に失敗したため、todoを完了にできませんでした。通信状況をご確認のうえ、もう一度お試しください。'
+        : 'todoを完了にできませんでした。しばらくしてからもう一度お試しください。')
     },
   })
 
@@ -52,7 +47,9 @@ export const useTodos = () => {
     ...asMutationOptions(todoControllerRemoveMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
     onError: (error) => {
-      notify.error(failureMessage(error, '削除'))
+      notify.error(error.response === undefined
+        ? '通信に失敗したため、todoを削除できませんでした。通信状況をご確認のうえ、もう一度お試しください。'
+        : 'todoを削除できませんでした。しばらくしてからもう一度お試しください。')
     },
   })
 
