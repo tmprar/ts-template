@@ -4,6 +4,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { findShownToasts } from '~~/test/nuxt/helpers/toasts'
 import {
   disconnectRequest,
+  holdRequest,
   rejectRequest,
 } from '~~/test/nuxt/mocks/handlers/errors'
 import {
@@ -145,20 +146,18 @@ describe('利用者がtodoを追加する', () => {
       expect((page.find('input').element as HTMLInputElement).value).toBe('牛乳を買う')
     })
 
-    it('一覧を取得し直さずに、追加のボタンを押せる状態に戻す', async () => {
-      let fetchCount = 0
-
-      server.use(http.get('*/api/todos', () => {
-        fetchCount += 1
-
-        return HttpResponse.json<TodoControllerFindManyResponse>({ todos: [] })
-      }))
-      disconnectRequest('post', '/api/todos')
+    it('一覧を取得し直すのを待たずに、追加のボタンを押せる状態に戻す', async () => {
+      serveTodos([])
       const page = await mountSuspended(IndexPage, { route: '/' })
 
       await vi.waitFor(() => {
         expect(page.text()).toContain('まだtodoがありません。')
       })
+      disconnectRequest('post', '/api/todos')
+      // 一覧の取得を応答させずに止め、取得し直しを待つとボタンが押せないままになる状態にする
+      const releaseTodos = holdRequest('get', '/api/todos')
+
+      onTestFinished(releaseTodos)
       await page.find('input').setValue('牛乳を買う')
       await page.find('form').trigger('submit')
 
@@ -168,7 +167,6 @@ describe('利用者がtodoを追加する', () => {
       await vi.waitFor(() => {
         expect(page.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
       })
-      expect(fetchCount).toBe(1)
     })
   })
 })
