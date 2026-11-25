@@ -82,6 +82,12 @@
         "docker"
       ],
       "groupName": "Node.js"
+    },
+    {
+      "matchPackageNames": [
+        "vue-tsc"
+      ],
+      "allowedVersions": "<3.3.14"
     }
   ]
 }

@@ -51,3 +51,9 @@
 - 決定: 開発者の指示により、akitoki のブラウザの E2E(`e2e`・`@e2e-dev/web` による AI エージェント型)は取り込まない
 - 決定: 開発者の指示により、infra の PR の cdk diff・deploy.yml・デプロイ用のロールの制限は取り込まない。テンプレートの `AppStack` が空で、akitoki の仕組みは akitoki の構成(EC2・CloudFront・ECR)を前提にしているため
 - 決定: akitoki の `pnpm-workspace.yaml` の `minimumReleaseAge` は取り込まない。いまの lockfile の 33 件(公開から 3 日経っていない TanStack Query・textlint など)が違反し、install が失敗するため
+
+## 2026-11-25 依存の版を akitoki にそろえ、vue-tsc を 3.3.13 に固定する
+- 決定: 開発者の指示により、両方にある依存の指定を akitoki の版にそろえる。Node は 26.13.1(`devEngines` と API の Dockerfile)、pnpm は 12.21.0 にする。CLI 自身の `engines` は変えない(作ったプロジェクトの Node は `devEngines` で pnpm が取得するため)
+- 決定: `@tanstack/vue-query` と `@tanstack/eslint-plugin-query` は、akitoki の `~5.108.0` に下げず、template の `~5.108.3` のままにする
+- 決定: akitoki(#177)と同じく `vue-tsc` を `3.3.13` に固定し、Renovate の `allowedVersions` を `<3.3.14` にする。3.3.14 は、ref でない変数にもテンプレートの中で `.value` を足して型付けする不具合(vuejs/language-tools#6364)があり、作ったプロジェクトでも同じ書き方で型検査が落ちる。直った版が出たら、規則を消して `~` に戻す
+- 決定: web の `Result` 型、API の `UrlBuilder`、`useMutationProgress` と `withSetup` は取り込まない。akitoki でも、特定の機能(調整リンクのフォーム、Google Calendar の gateway、設定画面の保存の表示)からだけ使っており、template に使う場所が無い

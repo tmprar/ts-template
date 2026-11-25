@@ -2,7 +2,7 @@
 # ビルドコンテキストはリポジトリのルート: docker build -f apps/api/Dockerfile .
 # Node のバージョンはルート package.json の devEngines と揃える
 
-FROM node:24.15.0-bookworm-slim AS base
+FROM node:26.13.1-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 # ルート package.json の packageManager と揃える。
@@ -11,7 +11,7 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN apt-get update \
   && apt-get install --no-install-recommends --yes git \
   && rm -rf /var/lib/apt/lists/* \
-  && npm install --global pnpm@12.4.1
+  && npm install --global pnpm@12.21.0
 WORKDIR /repo
 
 # API が依存する workspace パッケージだけを turbo に切り出させる。
@@ -31,7 +31,7 @@ RUN pnpm turbo build --filter=@myapp/api \
   && pnpm --filter @myapp/api deploy --prod /out
 
 # 実行時もビルドと同じ Debian(bookworm-slim)にする。alpine(musl)は使わない
-FROM node:24.15.0-bookworm-slim AS runtime
+FROM node:26.13.1-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out/package.json ./
