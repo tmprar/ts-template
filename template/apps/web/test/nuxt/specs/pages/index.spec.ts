@@ -4,6 +4,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { findShownToasts } from '~~/test/nuxt/helpers/toasts'
 import {
   disconnectRequest,
+  holdRequest,
   rejectRequest,
 } from '~~/test/nuxt/mocks/handlers/errors'
 import {
@@ -143,6 +144,29 @@ describe('利用者がtodoを追加する', () => {
         }])
       })
       expect((page.find('input').element as HTMLInputElement).value).toBe('牛乳を買う')
+    })
+
+    it('一覧を取得し直すのを待たずに、追加のボタンを押せる状態に戻す', async () => {
+      serveTodos([])
+      const page = await mountSuspended(IndexPage, { route: '/' })
+
+      await vi.waitFor(() => {
+        expect(page.text()).toContain('未完了 0 件 / 完了 0 件')
+      })
+      disconnectRequest('post', '/api/todos')
+      // 失敗のあとの取得し直しを応答させずに待たせ、取得し直しが終わらないうちの表示を見る
+      const releaseRefetch = holdRequest('get', '/api/todos')
+
+      onTestFinished(releaseRefetch)
+      await page.find('input').setValue('牛乳を買う')
+      await page.find('form').trigger('submit')
+
+      await vi.waitFor(() => {
+        expect(findShownToasts()).toHaveLength(1)
+      })
+      await vi.waitFor(() => {
+        expect(page.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
+      })
     })
   })
 })
