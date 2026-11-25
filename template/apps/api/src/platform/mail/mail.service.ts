@@ -1,7 +1,6 @@
 import type { Result } from 'neverthrow'
 
 import { Injectable } from '@nestjs/common'
-import { PinoLogger } from 'nestjs-pino'
 import {
   err,
   ok,
@@ -12,71 +11,49 @@ import { AppConfigService } from '#app/platform/config/index.js'
 const API_URL = 'https://api.resend.com/emails'
 
 /**
- * 送信APIのタイムアウト。超過時は送信失敗として呼び出し側(ジョブのリトライ)に委ねる
+ * この時間を超えた送信は待ち続けず、失敗として返す。再送は MailService では行わず、ジョブのリトライで行う
  */
 const SEND_TIMEOUT_MS = 5000
 
-/**
- * 送るメール1通。平文で送る
- */
 export type Mail = {
   body: string
   subject: string
 }
 
+export type MailDelivery = 'sent' | 'skipped'
+
 /**
- * 送信の失敗。送信APIの状態コード・タイムアウトはここでこの型に吸収する。
- *
- * 一時的な失敗として一種類だけを持つ。宛先の不正といった直らない失敗も
- * 送信APIの応答からは切り分けられず、リトライの上限で打ち切る扱いに変わりはないため。
- *
- * `cause` は翻訳前の原因(捕まえた例外・送信APIの状態コード)。
- * 失敗をどう扱うか決めた層がログに出すためだけに運ぶ
+ * メールの送信の失敗。`cause` は、失敗をどう扱うか決める側がログに出すための原因である。
+ * 失敗の種類は、リトライで解消する失敗と解消しない失敗に分けず、1つだけにする。
+ * 宛先の不正のようにリトライしても解消しない失敗も、送信APIの応答からは区別できないため
  */
 export type SendMailError = {
-  cause?: unknown
-  type: 'MailUnavailable'
+  cause: unknown
+  type: 'MailApiUnavailable'
 }
 
 /**
- * メールの送信基盤(Resend APIとの境界)。送る口だけを担い、メールの中身は知らない。
- * 文面の組み立て・宛先の解決・送る契機・リトライは、その仕事を所有するモジュールが決める
+ * 業務のルールを持たず、メールを送信する機能だけを提供する。
+ * 文面・宛先・送る契機・リトライの方針は、このクラスでは決めない。仕事を所有するモジュールが決める
  */
 @Injectable()
 export class MailService {
-  constructor(
-    private readonly config: AppConfigService,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(MailService.name)
-  }
+  constructor(private readonly config: AppConfigService) {}
 
   /**
-   * メールを送信する。
-   *
-   * 送信の設定(MAIL_FROM・RESEND_API_KEY)が無い開発環境では、外部へ出さず
-   * 文面をログに出して成功とみなす。本番では両方が必須なので、この分岐には入らない
-   * (env.schema.ts の起動時の検査)
+   * `to` 宛てにメールを 1 通送って `sent` を返し、送信の設定(MAIL_FROM・RESEND_API_KEY)のどちらかが無いときは送信APIへ要求を送らず `skipped` を返す。
+   * 送信の設定が無いことは失敗として返さない。本番では両方の設定が必須で、env.schema.ts が起動時に検査するため、
+   * 設定が無いのは本番以外に限られる
    */
   public async send(
     to: string,
     mail: Mail,
-  ): Promise<Result<undefined, SendMailError>> {
+  ): Promise<Result<MailDelivery, SendMailError>> {
     const from = this.config.get('MAIL_FROM', { infer: true })
     const apiKey = this.config.get('RESEND_API_KEY', { infer: true })
 
     if (from === undefined || apiKey === undefined) {
-      this.logger.info(
-        {
-          body: mail.body,
-          event: 'mail_send_skipped',
-          subject: mail.subject,
-          to,
-        },
-        '送信の設定が無いためメールを送らずログに出した',
-      )
-
-      return ok(undefined)
+      return ok('skipped')
     }
 
     try {
@@ -96,18 +73,17 @@ export class MailService {
       })
 
       if (!response.ok) {
-        // 宛先・本文は持ち出さず、送信APIが何を返したかだけを原因に載せる
         return err({
           cause: new Error(`メールの送信APIが${String(response.status)}を返した`),
-          type: 'MailUnavailable',
+          type: 'MailApiUnavailable',
         })
       }
 
-      return ok(undefined)
+      return ok('sent')
     } catch (error) {
       return err({
         cause: error,
-        type: 'MailUnavailable',
+        type: 'MailApiUnavailable',
       })
     }
   }

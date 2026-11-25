@@ -94,6 +94,9 @@ todo/
   (`repository/drizzle-todo.repository.ts`・`repository/drizzle-todo-comment.repository.ts`)。
   controller・usecase・query・repository・gateway など、どの役割も同じ
 - Worker は、Usecase を呼ぶ。エラーは throw する
+- ログを出すのは、いちばん外の階層である Controller と Worker だけにする。Usecase・QueryService・Repository・Gateway はログを出さず、起きたことは戻り値で伝える(失敗は `Result` の失敗、続行した場合の記録は DTO の項目)
+- トランザクションの中の処理が `Result` の失敗を返すと、例外を投げたときと同じくロールバックする(`DrizzleTransactionalAdapter`)。それでも、失敗を返す判定は書き込みより前に済ませる
+- 例外を catch して `Result` の失敗を返すときは、捕まえた例外を `cause` に載せる。下の層の失敗を自分の失敗に包み直すときも `cause` を引き継ぐ
 - `Result` の失敗の型は、役割を問わずメソッドごとに定義する(`completeTodo` なら `CompleteTodoError`、`send` なら `SendMailError`)。
   そのメソッドで起こる失敗だけを判別共用体に並べて `type` で見分け、失敗の種類ごとに必要な値を持たせる
   (`{ type: 'TodoNotFound', todoId: string }`)。Repository・Gateway の interface のメソッドの失敗の型は Domain に定義する
