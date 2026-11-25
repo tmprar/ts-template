@@ -4,13 +4,11 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql'
 const POSTGRES_IMAGE = 'paradedb/paradedb:latest-pg17'
 
 /**
- * e2eテスト用のPostgreSQLコンテナを起動する。worker専用DBの作成と
- * マイグレーション適用はsetup-db.tsが行う。ここで設定したprocess.envは
- * 後から起動されるvitestのワーカープロセスに引き継がれる
+ * PostgreSQL のコンテナを 1 つ起動し、接続先を process.env の TEST_DATABASE_BASE_URL に設定して、コンテナを停止する関数を返す。
+ * 起動したコンテナは、結合テストの全ワーカーが使う。この関数が設定した process.env は、後から起動される vitest のワーカープロセスに引き継がれる
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
-  // data directoryをtmpfsに載せ、耐久性設定を無効化してI/Oを削減する。
-  // テスト用途なのでデータが消えても問題ない
+  // data directoryをtmpfsに置き、fsyncとfull_page_writesを無効にしてI/Oを減らす。テスト用途のため、コンテナが止まるとデータが消えることを許容する
   const container = await new PostgreSqlContainer(POSTGRES_IMAGE)
     .withTmpFs({ '/var/lib/postgresql/data': 'rw' })
     .withCommand(['postgres', '-c', 'fsync=off', '-c', 'full_page_writes=off'])

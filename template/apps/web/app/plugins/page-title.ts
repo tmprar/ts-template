@@ -1,10 +1,9 @@
 /*
-  ページのタイトルはサービス名を添えて出す。各ページはuseHeadで画面の名前だけを渡し、
-  サービス名の位置と区切りはここで1箇所に決める。
+  サービス名の位置と区切り文字を各ページには書かず、このプラグインの1箇所で決める。
+  各ページはuseHeadで画面の名前だけを渡す。
 
-  app.vueではなくプラグインに置くのは、エラー画面(error.vue)がapp.vueの外で
-  描かれるため。プラグインならどちらの入り口でも同じ形になる。
-  タイトルを持たない画面(遷移だけのindex)ではサービス名だけになる
+  titleTemplateはapp.vueには置かず、プラグインに置く。エラー画面(error.vue)はapp.vueを通らずに
+  描画される。プラグインに置けば、app.vueとerror.vueのどちらの画面にも同じtitleTemplateが適用される
 */
 export default defineNuxtPlugin(() => {
   useHead({

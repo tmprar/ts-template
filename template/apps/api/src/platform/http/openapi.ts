@@ -17,7 +17,8 @@ import {
 import path from 'node:path'
 
 /**
- * ルートデコレータや@ApiResponseに渡したvalibotスキーマを、OpenAPIのスキーマに変換して返す
+ * ルートデコレータや `@ApiResponse` に渡した valibot スキーマを、OpenAPI に出力する JSON Schema へ変換して返し、valibot 以外のスキーマには undefined を返す。
+ * valibot のスキーマの変換は @nestjs/swagger に任せない。@nestjs/swagger は valibot のスキーマを変換する機能を持たないため
  */
 const standardSchemaConverter: StandardSchemaConverter = (
   schema,
@@ -34,22 +35,22 @@ const standardSchemaConverter: StandardSchemaConverter = (
     typeMode: schemaType,
   })
 
-  // $schemaはJSON Schema方言の識別子でOpenAPIドキュメントには不要
   delete jsonSchema.$schema
 
   return { schema: jsonSchema }
 }
 
 /**
- * `app` のルートから、API の OpenAPI の文書を作って返す
+ * アプリに登録されたルートから、OpenAPI 3.1 のドキュメントを作って返す。
+ * 生成の手順は、開発時の起動(main.ts)と生成スクリプトのそれぞれには書かない。両者の出力を同じ内容にするため、この関数だけに置く
  */
 export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('myapp API')
     .setVersion('1.0')
     /*
-      OpenAPI 3.0 は型としてのnullを持たず、valibotのnullableを変換した
-      { type: 'null' } を表現できない。クライアント生成側がunknownへ倒すため、
+      OpenAPI 3.0 では出力しない。3.0 は型としてのnullを持たず、valibotのnullableを変換した
+      { type: 'null' } を表現できない。表現できない型をクライアント生成がunknownとして扱うため、
       JSON Schemaと互換のある3.1で出力する
     */
     .setOpenAPIVersion('3.1.0')
@@ -58,16 +59,16 @@ export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
   return SwaggerModule.createDocument(app, config, { standardSchemaConverter })
 }
 
-/*
-  webのクライアント生成(openapi-ts)が読む場所。
-  パッケージルート(apps/api)からの相対で解決する。nest startもdist/scripts/generate-openapiも
-  作業ディレクトリはapps/apiのため一致する。
-  このファイルからの相対にすると、置き場所を変えるたびに出力先がずれる(一度それで壊した)
-*/
+/**
+ * webのクライアント生成(openapi-ts)が読むファイルのパス。
+ * このファイルからの相対パスでは解決せず、パッケージルート(apps/api)からの相対パスで解決する。
+ * このファイルからの相対パスにすると、このファイルを移動するたびに出力先が変わり、web が古いファイルを読み続けるため。
+ * nest startもdist/scripts/generate-openapiも作業ディレクトリはapps/apiのため、出力先は一致する
+ */
 const outputPath = path.resolve('.out/openapi.json')
 
 /**
- * OpenAPI の文書を、web が API クライアントを生成するときに読む openapi.json に書き出す
+ * OpenAPI ドキュメントを、整形した JSON として作業ディレクトリの `.out/openapi.json` へ書き出し、出力先のディレクトリが無ければ作る
  */
 export async function writeOpenApiDocument(
   document: OpenAPIObject,

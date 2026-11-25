@@ -11,7 +11,6 @@ import {
   ApiResponse as SwaggerApiResponse,
 } from '@nestjs/swagger'
 
-// スキーマの出力型(またはそのPromise)を返すメソッドにしか付けられないデコレータ型
 type SchemaMethodDecorator<TOutput> = <
   TMethod extends (...arguments_: never[]) => Promise<TOutput> | TOutput,
 >(
@@ -26,7 +25,8 @@ type SchemaMethodDecorator<TOutput> = <
 export function ApiResponse(): MethodDecorator
 /**
  * controller のメソッドに、OpenAPI のレスポンス定義と実行時のシリアライズを、渡した valibot スキーマから付けるデコレータを返す。
- * 戻り値がスキーマの出力型と一致しないメソッドに付けると、コンパイルエラーになる
+ * 戻り値がスキーマの出力型と一致しないメソッドに付けると、コンパイルエラーになる。
+ * OpenAPI のレスポンス定義とシリアライズのスキーマを別々のデコレータでは書かせない。別々に書いた 2 つの定義が食い違うことを防ぐため
  */
 export function ApiResponse<TSchema extends v.GenericSchema>(
   schema: TSchema,
@@ -46,8 +46,8 @@ export function ApiResponse(
     )
   }
 
-  // StandardSchemaSerializerInterceptorは配列レスポンスの各要素にスキーマを
-  // 適用するため、配列スキーマの場合は要素スキーマをシリアライザに渡す
+  // 配列スキーマはそのままシリアライザに渡さず、要素スキーマを渡す。
+  // StandardSchemaSerializerInterceptorは配列レスポンスの各要素にスキーマを適用するため
   const serializerSchema
     = schema.type === 'array'
       ? (schema as v.ArraySchema<v.GenericSchema, undefined>).item

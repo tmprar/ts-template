@@ -1,8 +1,9 @@
 /*
-  Sentry の初期化。Nest より先に、他のモジュールを読み込む前に走らせる必要がある
-  (依存(pg・http 等)の計装は読み込み時に差し込まれるため)。
-  本番は node の --import で(Dockerfile)、開発は main.ts の先頭の import で読む。
-  Nest の外で動くため、ここだけは AppConfigService を使えず process.env を env.schema で検証して読む
+  Sentry の初期化は、Nest を含む他のモジュールを読み込んだ後には行わない。
+  Sentry は依存 package(pg・http 等)が読み込まれる時点で計装を組み込むため、このファイルを最初に読み込む
+  (本番は node の --import(Dockerfile)、開発は main.ts の先頭の import)。
+  設定は AppConfigService 経由ではなく、process.env を env.schema で検証して読む。
+  このファイルは Nest の DI の外で実行され、AppConfigService を使えないため
 */
 import * as Sentry from '@sentry/nestjs'
 import * as v from 'valibot'
@@ -10,20 +11,20 @@ import * as v from 'valibot'
 import { envSchema } from '#app/platform/config/index.js'
 
 /**
- * トレース(リクエストの内訳)を送る割合。無料枠(月 5,000 スパン)に収める。
- * 例外が起きたリクエストは割合によらず送られる
+ * トレースを送るリクエストの割合(例外が起きたリクエストは、この割合によらず送られる)。
+ * すべてのリクエストのトレースは送らない。Sentry の無料枠(月 5,000 スパン)に収めるため
  */
 const TRACES_SAMPLE_RATE = 0.1
 
 /**
- * スパンに残す属性(並びは lint が辞書順に保つ)。URL のパスとクエリには identifier
- * (外部サービス上の ID、共有 URL のトークンなど)が入りうるため、伏せる側ではなく残す側を並べる。
- * 伏せる側を並べる形は、新しい呼び出し先や SDK が増やした属性で静かに漏れる。
+ * スパンに残す、どこへ何をして何が返ったかを表す属性(HTTP はメソッド・接続先・ステータス、DB は placeholder のままの文と対象の構造、ジョブはキューの名前と操作)。
+ * 除外する属性ではなく、スパンに残す属性を列挙する。URL のパスとクエリには識別子
+ * (外部サービス上の ID、共有 URL のトークンなど)が入りうる。
+ * 除外する属性を列挙する方式では、新しい呼び出し先や SDK が追加した属性が除外の対象に入らず、気づかないまま Sentry へ送られる。
  *
- * 残すのは「どこへ何をして何が返ったか」だけ:
- * HTTP はメソッド・接続先・ステータス(URL は url.full / url.path に入るので残さない)、
- * DB は placeholder のままの文と対象の構造(束縛した値は db.query.parameter.* で来る)、
- * ジョブはキューの名前と操作(投入した値は残さない)
+ * HTTP の url.full と url.path には URL が、DB の db.query.parameter.* には束縛した値が入るため、どちらも残さない。
+ * ジョブに投入した値も残さない。
+ * リクエストのヘッダと利用者の IP は Sentry へ送らない要件のため、ヘッダと IP を表す属性もこの一覧に入れていない
  */
 const SPAN_ATTRIBUTES_TO_KEEP = new Set([
   'db.collection.name',
@@ -45,12 +46,11 @@ const SPAN_ATTRIBUTES_TO_KEEP = new Set([
 if (!Sentry.isInitialized()) {
   const env = v.parse(envSchema, process.env)
 
-  // DSN が無ければ SDK は何も送らない(開発・テスト)
+  // DSN の有無では初期化を分岐しない。DSN が無ければ SDK は何も送らないため(開発・テスト)
   Sentry.init({
     /*
-      残す属性だけを選び、外部への要求の名前は「メソッド + 接続先」に置き換える
-      (自動計装は URL をそのままスパン名にする)。
-      traceLifecycle: 'static' のため withStaticSpan で包む(包まない callback は呼ばれない)
+      外部への HTTP 要求のスパン名を、メソッドと接続先で付け直す。自動計装は URL をそのままスパン名にするため。
+      callback を withStaticSpan で包むのは、traceLifecycle が 'static' のときに、包んだ callback だけが呼ばれるため
     */
     beforeSendSpan: Sentry.withStaticSpan((span) => {
       const data = Object.fromEntries(
@@ -68,10 +68,10 @@ if (!Sentry.isInitialized()) {
       }
     }),
     /*
-      イベントに付く受信リクエストの情報も、残すものだけにする(スパンの属性とは別経路)。
-      クエリには認可コードやトークンが入りうり(OAuth のコールバックなど)、
-      ヘッダは Cookie と Authorization 以外が既定で載る。どちらも落とす。
-      どのエンドポイントで落ちたかはトランザクション名(Express のルート)に残る
+      イベントに付く受信リクエストのクエリとヘッダは、SDK の既定のままにせず、どちらも送らない。
+      クエリには OAuth の認可コードと state のような秘密の値が入りうり、
+      ヘッダは Cookie と Authorization 以外が既定で送られるため。
+      どのエンドポイントで例外が起きたかはトランザクション名(Express のルート)に残る
     */
     dataCollection: {
       cookies: false,
@@ -81,32 +81,28 @@ if (!Sentry.isInitialized()) {
     dsn: env.SENTRY_DSN,
     environment: env.SENTRY_ENVIRONMENT ?? env.NODE_ENV,
     /*
-      死活監視は Route 53 が 8 拠点から 30 秒おきに叩く(1 日約 23,000 回)。トレースに載せると
-      無料枠(月 5,000 スパン)を初日で使い切るので、リクエストログと同様に除く
+      死活監視のリクエストはトレースに含めない。Route 53 が 8 拠点から 30 秒おきにリクエストを送り(1 日約 23,000 回)、
+      トレースに含めると無料枠を初日で使い切るため
     */
     ignoreTransactions: ['GET /api/health'],
     /*
-      外へ出す要求のブレッドクラムは作らせない。スパンは beforeSendSpan で属性を選べるが、
-      ブレッドクラムは URL をそのまま持ち選別の口が別になるため。
-      どこへ何を叩いて何が返ったかはスパン(http.client)に残る
+      外部への HTTP 要求のブレッドクラムは作らない。スパンは beforeSendSpan で属性を選べるが、
+      ブレッドクラムは URL をそのまま持ち、URL を除くには beforeSendSpan とは別の処理が必要になるため。
+      どこへ何を要求して何が返ったかはスパン(http.client)に残る
     */
     integrations: [
       Sentry.nativeNodeFetchIntegration({ breadcrumbs: false }),
       Sentry.httpIntegration({ breadcrumbs: false }),
     ],
-    // デプロイしたイメージのタグ(コミットの SHA)。どのデプロイから出始めたかを見る
     release: env.SENTRY_RELEASE,
     /*
-      SDK v11 の既定 'stream' はスパンを終了次第に個別に送るため、ignoreTransactions と
-      ステータスコードによる除外(httpIntegration の ignoreStatusCodes、既定で 3xx・401〜404)が効かず、
-      ヘルスチェックや存在しないパスへの探りが「Missing Trace Root」のミドルウェアスパンとして残った。
-      'static' はリクエスト完了までまとめてから送るので、終わった後に名前・ステータスで丸ごと捨てられる
+      SDK v11 の既定 'stream' のままにしない。'stream' はスパンを終了次第に個別に送るため、ignoreTransactions と
+      ステータスコードによる除外(httpIntegration の ignoreStatusCodes、既定で 3xx・401〜404)が適用されず、
+      ヘルスチェックや存在しないパスを探索するアクセスが「Missing Trace Root」のミドルウェアスパンとして Sentry に残る。
+      'static' はリクエストの完了までスパンをまとめてから送るので、完了後にトランザクション名とステータスコードで
+      そのリクエストのスパンをすべて除外できる
     */
     traceLifecycle: 'static',
-    /*
-      Cookie と Authorization は SDK が [Filtered] にするが、それ以外のヘッダと利用者の IP は
-      既定でスパンの属性に載る。どちらも beforeSendSpan の allowlist で落としている
-    */
     tracesSampleRate: TRACES_SAMPLE_RATE,
   })
 }

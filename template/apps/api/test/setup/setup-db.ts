@@ -12,7 +12,6 @@ const MIGRATIONS_FOLDER = fileURLToPath(
   new URL('../../drizzle', import.meta.url),
 )
 
-// narrowingを関数内(databaseUrl)まで効かせるため、||で受けてstringに確定させる
 const BASE_URL
   = process.env['TEST_DATABASE_BASE_URL']
     || assert.fail(
@@ -58,8 +57,7 @@ const client = new pg.Client({ connectionString: databaseUrl(workerDb) })
 await client.connect()
 await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER })
 
-// 各テストをまっさらなDBで開始する。drizzleのマイグレーション管理テーブルは
-// publicではなくdrizzleスキーマにあるため対象外
+// マイグレーション管理テーブルを除外する条件は書かない。drizzleのマイグレーション管理テーブルはpublicではなくdrizzleスキーマにあるため、このTRUNCATEの対象にならない
 beforeEach(async () => {
   const result = await client.query<{ tablename: string }>(
     'SELECT tablename FROM pg_tables WHERE schemaname = \'public\'',

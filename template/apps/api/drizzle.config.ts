@@ -1,7 +1,7 @@
 import { defineConfig } from 'drizzle-kit'
 
-// drizzle-kit CLI用の設定。アプリ本体のconfigモジュールは通らないため、
-// ここではprocess.envを直接参照する。
+// このファイルではAppConfigService経由ではなくprocess.envを直接参照する。
+// drizzle-kitの実行ではアプリ本体のconfigモジュールが読み込まれないため
 export default defineConfig({
   dbCredentials: {
     url:

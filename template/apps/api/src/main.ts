@@ -1,4 +1,4 @@
-// Sentry の計装は他のどの import よりも先に読む(instrument.ts)
+// Sentry が依存 package の読み込み時に計装を組み込めるよう、この import を先頭に置く
 import '#app/instrument.js'
 
 import type { NestExpressApplication } from '@nestjs/platform-express'
@@ -23,27 +23,25 @@ import {
 } from '#app/platform/http/index.js'
 
 /**
- * API のアプリを作り、設定を当てて、指定のポートで要求の受け付けを始める
+ * API サーバを起動して PORT でリクエストの待ち受けを始め、本番以外では OpenAPI ドキュメントのファイルへの書き出しと、
+ * API リファレンス(`/api/docs`)・`/api/openapi.json` の配信も行う
  */
 async function bootstrap() {
-  // ロガーを pino に差し替えるまでのログを溜めておく(setupApp が useLogger する)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment -- Nest がオプションの型を interface でなく class で宣言しているため
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true })
   const config = app.get(AppConfigService)
 
-  // Nest 自身のログも pino に流す。溜めていたログはここで吐かれる
   app.useLogger(app.get(Logger))
 
   setupApp(app)
 
-  // APIリファレンス(Scalar)とOpenAPIは開発者向けのため、本番では配信しない
   if (config.get('NODE_ENV', { infer: true }) !== 'production') {
     const document = createOpenApiDocument(app)
 
     await writeOpenApiDocument(document)
     app.use(`/${API_PREFIX}/docs`, apiReference({ content: document }))
-    // hey-apiのwatchはURL入力のみ対応のため、開発時はOpenAPIをHTTPでも配信する。
-    // nest --watchの再起動ごとに最新の内容が返り、webのクライアントが再生成される
+    // OpenAPIはファイルへの書き出しだけにせず、HTTPでも配信する。hey-apiのwatchはURLの入力にだけ対応するため。
+    // nest --watchが再起動するたびに最新の内容が返り、webのクライアントが再生成される
     app.use(
       `/${API_PREFIX}/openapi.json`,
       (_request: Request, response: Response) => {
