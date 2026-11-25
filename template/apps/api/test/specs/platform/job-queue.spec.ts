@@ -66,4 +66,32 @@ describe('ジョブキューの投入', () => {
       expect(await findJob(COMMITTED_JOB)).toBeDefined()
     })
   })
+
+  describe('定期実行を登録したとき', () => {
+    it('UTC で解釈する cron 式の時刻ごとに投入するよう、pg-boss に登録する', async () => {
+      const jobQueue = ctx.app.get(JobQueueService)
+
+      await jobQueue.register('scheduled_test', {
+        retryBackoff: false,
+        retryDelay: 1,
+        retryDelayMax: 1,
+        retryLimit: 0,
+      }, async () => {
+        await Promise.resolve()
+      })
+      await jobQueue.schedule('scheduled_test', '0 18 * * *')
+
+      const result = await ctx.db.execute<{
+        cron: string
+        timezone: string
+      }>(
+        sql`SELECT cron, timezone FROM pgboss.schedule WHERE name = 'scheduled_test'`,
+      )
+
+      expect(result.rows).toEqual([{
+        cron: '0 18 * * *',
+        timezone: 'UTC',
+      }])
+    })
+  })
 })

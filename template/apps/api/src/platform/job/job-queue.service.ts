@@ -131,6 +131,18 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
   }
 
   /**
+   * `queue` のキューへ、`cron`(UTC で解釈する cron 式)の時刻ごとに、データが空のジョブを投入するよう登録する。
+   * 同じキューの登録は置き換わるので、起動のたびに呼んでよい。キューは先に register で作っておく。pg-boss が未開始のときは例外を投げる。
+   * 停止やデプロイで投入の時刻を過ぎたときは、過ぎた回の数にかかわらず 1 件だけ投入させる。既定の skip では、投入の時刻に毎回デプロイが重なると、その仕事が一度も実行されないため
+   */
+  public async schedule(queue: string, cron: string): Promise<void> {
+    await this.requireBoss().schedule(queue, cron, {}, {
+      missed: 'once',
+      tz: 'UTC',
+    })
+  }
+
+  /**
    * 起動済みのジョブキューを返す。起動前に呼ぶと例外を投げる
    */
   private requireBoss(): PgBoss {

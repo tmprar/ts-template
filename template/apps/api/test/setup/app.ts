@@ -107,6 +107,13 @@ export class InlineJobQueue {
 
     await Promise.resolve()
   }
+
+  /**
+   * 定期実行の登録を受け付けるが、何もしない。定期実行のジョブを処理するテストは、時刻を待たずに enqueue で投入する
+   */
+  public async schedule(): Promise<void> {
+    await Promise.resolve()
+  }
 }
 
 /**
