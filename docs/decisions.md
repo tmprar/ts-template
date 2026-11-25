@@ -43,7 +43,7 @@
 - 決定: 自作のコードの自動 import を止め(`components.dirs: []`・`imports.scan: false`)、使うファイルが import する。import 文が無いと、境界の規則で依存を検査できないため
 - 決定: 取得と更新は TanStack Query で書き、生成するクライアントを hey-api の axios 版と `@tanstack/vue-query` プラグインにする。更新の失敗は `Result` で返さず、`onError` でトーストを出す。web の依存から neverthrow を外し、`docs/workflow.md` の採用済みのスタックに TanStack Query と axios を加える
 - 決定: 取得し直しに失敗しても、前に取得した一覧を表示し続ける。読み込めなかった案内は、最初の取得に失敗して一覧が無いときだけ出す
-- 要確認: 確認中に、DB を止めると API のプロセスが落ちることが分かった。`pg.Pool` に `error` の listener が無く、DB が接続を切ったときの `error` イベントが未処理の例外になる。akitoki も同じ作りで、今回の取り込みの範囲外なので直していない
+- 要確認: 確認中に、DB を止めると API のプロセスも落ちると分かった。`pg.Pool` に `error` の listener が無く、DB が接続を切ったときの `error` イベントが未処理の例外になる。akitoki も同じ作りで、今回の取り込みの範囲外なので直していない
 
 ## 2026-11-24 作ったプロジェクトの判断の記録を ADR にし、E2E と infra の取り込みを見送る
 - 決定: 開発者の指示により、作ったプロジェクトの判断の記録を `docs/decisions.md` から `docs/adr/` の ADR(adrs で管理)に移す。規則は akitoki の `docs/workflow.md` の「判断の記録」「未確認の判断の確認」を写し、lefthook と CI(`lint-adr`)で `adrs doctor --warnings-as-errors` を実行する。ADR 1 と、ADR を使う判断の ADR 2 をテンプレートに置く
@@ -55,5 +55,5 @@
 ## 2026-11-25 依存の版を akitoki にそろえ、vue-tsc を 3.3.13 に固定する
 - 決定: 開発者の指示により、両方にある依存の指定を akitoki の版にそろえる。Node は 26.13.1(`devEngines` と API の Dockerfile)、pnpm は 12.21.0 にする。CLI 自身の `engines` は変えない(作ったプロジェクトの Node は `devEngines` で pnpm が取得するため)
 - 決定: `@tanstack/vue-query` と `@tanstack/eslint-plugin-query` は、akitoki の `~5.108.0` に下げず、template の `~5.108.3` のままにする
-- 決定: akitoki(#177)と同じく `vue-tsc` を `3.3.13` に固定し、Renovate の `allowedVersions` を `<3.3.14` にする。3.3.14 は、ref でない変数にもテンプレートの中で `.value` を足して型付けする不具合(vuejs/language-tools#6364)があり、作ったプロジェクトでも同じ書き方で型検査が落ちる。直った版が出たら、規則を消して `~` に戻す
+- 決定: akitoki(#177)と同じく `vue-tsc` を `3.3.13` に固定し、Renovate の `allowedVersions` を `<3.3.14` にする。3.3.14 には、ref でない変数にもテンプレートの中で `.value` を足して型付けする不具合(vuejs/language-tools#6364)がある。作ったプロジェクトでも、同じ書き方をすると型検査に失敗する。直った版が出たら、規則を消して `~` に戻す
 - 決定: web の `Result` 型、API の `UrlBuilder`、`useMutationProgress` と `withSetup` は取り込まない。akitoki でも、特定の機能(調整リンクのフォーム、Google Calendar の gateway、設定画面の保存の表示)からだけ使っており、template に使う場所が無い
