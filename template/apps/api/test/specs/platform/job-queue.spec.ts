@@ -72,7 +72,7 @@ describe('ジョブキューの投入', () => {
       const jobQueue = ctx.app.get(JobQueueService)
 
       await jobQueue.register('scheduled_test', {
-        retryBackoff: false,
+        retryBackoff: true,
         retryDelay: 1,
         retryDelayMax: 1,
         retryLimit: 0,
