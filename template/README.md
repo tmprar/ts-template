@@ -118,7 +118,7 @@ pnpm --filter @myapp/api dev
 | 用途                                          | 場所                             |
 | --------------------------------------------- | -------------------------------- |
 | AI エージェント向けの指示(規約と作業の進め方) | `CLAUDE.md` / `docs/workflow.md` |
-| 要件定義(要件 ID と実装状況)                  | `docs/requirements.md`           |
+| 要件定義(要件 ID)                             | `docs/requirements.md`           |
 | 判断の記録・要確認事項(ADR。adrs で管理する)  | `docs/adr/`                      |
 | レビューの観点(Claude のレビューと手元の点検)  | `docs/review/`                   |
 | Codex などのエージェント向けの入口             | `AGENTS.md`                      |

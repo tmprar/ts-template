@@ -9,6 +9,7 @@
 - 確認を待たずに進める。判断が必要な場面では `docs/requirements.md` と `CLAUDE.md` に沿って決め、`docs/adr/` の ADR に記録する(「判断の記録」)
 - エージェントが自分で下した判断は、未確認の判断として Status を Proposed にした ADR に記録し、確認を待たずに実装する。push する前に、そのブランチで足した・変えた Proposed の ADR を人間に示して確認を依頼する。人間は、Accepted にするか改める(「未確認の判断の確認」)
 - 要件定義書で決められない重要な判断(仕様の解釈が大きく分かれる、要件同士が矛盾する等)は、実装を止めずに最も無難な案で進め、その ADR の Consequences に「要確認」として残す
+- 複数のエージェントで並行して作業するときは、`git worktree` で作業ツリーを分ける。同じ作業ツリーで並行すると、ファイルの書き換えと git の操作がぶつかる
 
 ## 検証(証拠を出力に残す)
 
@@ -27,7 +28,10 @@
 
 ## 依存パッケージ
 
-- 採用済みのスタック(NestJS / Drizzle / valibot / pg-boss / neverthrow / Nuxt / Nuxt UI / VueUse / TanStack Query / axios / vitest)とその公式の周辺パッケージは追加してよい
+- 採用済みのスタックとその公式の周辺パッケージは、追加してよい。採用済みのスタックは次のとおりである
+  - API:NestJS / Drizzle / valibot / pg-boss / neverthrow
+  - web:Nuxt / Nuxt UI / VueUse / TanStack Query / axios
+  - テストと検査:vitest / MSW / Stryker / textlint
 - それ以外は追加しない。必要と判断したら Status が Proposed の ADR に提案として理由を残し、既存の手段で実装する。Decision には、依存を導入していないことを書く
 - バージョン指定は `~` を付ける(`pnpm-workspace.yaml` の `savePrefix`)
 
@@ -44,7 +48,9 @@
 - squash マージ後のローカルブランチは `git branch -d` が「未マージ」として拒否する。
   main に内容が入っていることを確認して `git branch -D` で消す
 - コミットは要件単位。メッセージは日本語の常体で、`feat: todoに期限を設定できるようにする(TODO-6)` のように要件 ID を含める。メッセージは lefthook の `commit-msg` で commitlint が検査する(設定は `commitlint.config.mjs`)
-- 完了した要件は `docs/requirements.md` の「状況」列を実装済みに更新する
+- 変更した理由(何が問題で、何をどう変えたか)は、コミットメッセージの本文に書く。コードがその形である理由は、コードコメントにも書く。squash マージでは PR の本文が main のコミットメッセージの本文になるので、PR の本文にも同じ理由を書く
+- コミットメッセージ、PR の title と本文、PR や issue へのコメントの文章は、`CLAUDE.md` の「文章」に従って書く
+- 実装状況は `docs/requirements.md` に書かない。まだ実装していない要件は GitHub の Issue で追い、実装した PR で Issue を閉じる
 - 仕様の変更や判断が生じたら `docs/requirements.md` を更新し、判断を `docs/adr/` の ADR に記録する
 - セットアップやコマンドが変わったら、`CLAUDE.md` と `README.md` の該当節も更新する
 

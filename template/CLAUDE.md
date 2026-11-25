@@ -209,7 +209,7 @@ todo/
 
 @docs/workflow.md
 
-上記に加え、判断が必要な場面では `docs/requirements.md`(要件 ID と実装状況はここが正)と `docs/adr/` の ADR を
+上記に加え、判断が必要な場面では `docs/requirements.md`(要件 ID はここが正)と `docs/adr/` の ADR を
 参照して決め、結果を ADR に記録すること(`docs/workflow.md` の「判断の記録」)。
 
 ## やらないこと
@@ -225,7 +225,7 @@ todo/
 
 | 用途 | 場所 |
 | --- | --- |
-| 要件定義(要件 ID と実装状況はここが正) | `docs/requirements.md` |
+| 要件定義(要件 ID はここが正。実装状況は GitHub の Issue で追う) | `docs/requirements.md` |
 | 判断の記録・要確認事項(ADR。adrs で管理する) | `docs/adr/` |
 | 作業の進め方 | `docs/workflow.md` |
 | レビューの観点 | `docs/review/` |
