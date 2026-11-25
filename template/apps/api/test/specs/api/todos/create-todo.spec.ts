@@ -1,7 +1,10 @@
 import { todoResponseSchema } from '@myapp/contracts'
 import request from 'supertest'
 
-import { parseBody } from '#test/helpers/http.js'
+import {
+  expectErrorCode,
+  parseBody,
+} from '#test/helpers/http.js'
 import { useTestApp } from '#test/setup/app.js'
 
 describe('POST /api/todos', () => {
@@ -51,6 +54,7 @@ describe('POST /api/todos', () => {
         .post('/api/todos')
         .send(payload)
         .expect(400)
+        .expect(expectErrorCode('INVALID_REQUEST'))
     })
   })
 })

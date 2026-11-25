@@ -176,6 +176,28 @@ describe('利用者がtodoを完了にする', () => {
     })
   })
 
+  describe('すでに完了しているtodoだったとき', () => {
+    it('すでに完了していることを、トーストで伝える', async () => {
+      const todo = openTodo('00000000-0000-4000-8000-000000000001', '牛乳を買う')
+
+      serveTodos([todo])
+      rejectRequest('post', `/api/todos/${todo.id}/complete`, 409, 'TODO_ALREADY_COMPLETED')
+      const page = await mountSuspended(IndexPage, { route: '/' })
+
+      await vi.waitFor(() => {
+        expect(shownTitles(page)).toEqual(['牛乳を買う'])
+      })
+      await page.find('li button').trigger('click')
+
+      await vi.waitFor(() => {
+        expect(findShownToasts()).toEqual([{
+          duration: 0,
+          title: 'このtodoはすでに完了しています。',
+        }])
+      })
+    })
+  })
+
   describe('APIが失敗を返したとき', () => {
     it('しばらくしてから試すよう、トーストで伝える', async () => {
       const todo = openTodo('00000000-0000-4000-8000-000000000001', '牛乳を買う')
@@ -219,6 +241,28 @@ describe('利用者がtodoを削除する', () => {
 
       await vi.waitFor(() => {
         expect(page.text()).toContain('まだtodoがありません。')
+      })
+    })
+  })
+
+  describe('すでに削除されたtodoだったとき', () => {
+    it('すでに削除されていることを、トーストで伝える', async () => {
+      const todo = openTodo('00000000-0000-4000-8000-000000000001', '牛乳を買う')
+
+      serveTodos([todo])
+      rejectRequest('delete', `/api/todos/${todo.id}`, 404, 'TODO_NOT_FOUND')
+      const page = await mountSuspended(IndexPage, { route: '/' })
+
+      await vi.waitFor(() => {
+        expect(shownTitles(page)).toEqual(['牛乳を買う'])
+      })
+      await page.find('button[aria-label="「牛乳を買う」を削除"]').trigger('click')
+
+      await vi.waitFor(() => {
+        expect(findShownToasts()).toEqual([{
+          duration: 0,
+          title: 'このtodoはすでに削除されています。',
+        }])
       })
     })
   })

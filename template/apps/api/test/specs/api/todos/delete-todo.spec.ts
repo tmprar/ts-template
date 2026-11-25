@@ -1,6 +1,7 @@
 import request from 'supertest'
 
 import { todoFactory } from '#test/factories/todos.js'
+import { expectErrorCode } from '#test/helpers/http.js'
 import { useTestApp } from '#test/setup/app.js'
 
 const UNKNOWN_ID = '00000000-0000-4000-8000-000000000000'
@@ -30,6 +31,7 @@ describe('DELETE /api/todos/:id', () => {
       await request(ctx.server())
         .delete(`/api/todos/${UNKNOWN_ID}`)
         .expect(404)
+        .expect(expectErrorCode('TODO_NOT_FOUND'))
     })
   })
 })

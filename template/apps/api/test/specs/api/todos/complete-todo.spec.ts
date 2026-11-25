@@ -2,7 +2,10 @@ import { todoResponseSchema } from '@myapp/contracts'
 import request from 'supertest'
 
 import { todoFactory } from '#test/factories/todos.js'
-import { parseBody } from '#test/helpers/http.js'
+import {
+  expectErrorCode,
+  parseBody,
+} from '#test/helpers/http.js'
 import { useTestApp } from '#test/setup/app.js'
 
 const UNKNOWN_ID = '00000000-0000-4000-8000-000000000000'
@@ -40,6 +43,7 @@ describe('POST /api/todos/:id/complete', () => {
       await request(ctx.server())
         .post(`/api/todos/${todo.id}/complete`)
         .expect(409)
+        .expect(expectErrorCode('TODO_ALREADY_COMPLETED'))
     })
   })
 
@@ -48,6 +52,7 @@ describe('POST /api/todos/:id/complete', () => {
       await request(ctx.server())
         .post(`/api/todos/${UNKNOWN_ID}/complete`)
         .expect(404)
+        .expect(expectErrorCode('TODO_NOT_FOUND'))
     })
   })
 
@@ -56,6 +61,7 @@ describe('POST /api/todos/:id/complete', () => {
       await request(ctx.server())
         .post('/api/todos/invalid/complete')
         .expect(400)
+        .expect(expectErrorCode('INVALID_REQUEST'))
     })
   })
 })

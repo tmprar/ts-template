@@ -30,6 +30,11 @@
 - `Result` の失敗の型がメソッドごとに定義され、`type` で見分ける判別共用体になっている。そのメソッドで起こらない失敗が並んでいない
 - 例外を catch して `Result` の失敗を返す箇所と、下の層の失敗を包み直す箇所で、`cause` を引き継いでいる
 - ログを出しているのが Controller と Worker だけになっている。Usecase・QueryService・Repository・Gateway がログを出していない
+- Controller が投げる例外に `code`(大文字のスネークケース)と `message` を渡している
+- 例外の `code` を追加・変更したときは、次の 3 つが一致している
+  - Controller が投げる `code`
+  - そのエンドポイントの `@ApiErrorResponse` に並べた `code`
+  - 結合テストの `expectErrorCode`(`apps/api/test/specs/` を `code` の文字列で検索して確かめる)
 - 環境変数を追加したときは、`apps/api/src/platform/config/env.schema.ts` に追加され、`AppConfigService` 経由で参照されている
 - ルートを追加したときは、`/api` 接頭辞の下にある
 
@@ -54,7 +59,7 @@
 - API の取得と更新が composable の中の TanStack Query で書かれている。`useAsyncData` を使っていない
 - `queryKey` と取得・更新の関数を手で書かず、生成された `…Options()` / `…Mutation()` を使っている。
   `…Mutation()` の戻り値をスプレッドするときに `asMutationOptions` を通している
-- 更新の失敗を `useMutation` のオプションの `onError` で受けてトーストで伝え、接続の失敗を `error.response` の有無で見分けている
+- 更新の失敗を `useMutation` のオプションの `onError` で受けてトーストで伝え、接続の失敗を `error.response` の有無で見分け、原因を `error.response.data.code` で分けている。HTTP ステータスや `message` で分岐していない
 - 更新の失敗の案内の文言を `onError` の中で決め、`useNotify` の `error` でトーストに表示している。取得の失敗を画面に残す案内は、`error` から `computed` で導き、`ref` に代入していない
 - 更新のあとに取得し直す取得を `useMutation` の `meta.invalidates` に書いている(`onSettled` などで `invalidateQueries` を直接呼んでいない)
 - composable が `mutate` を操作の名前で返し、画面に固有の後処理を、画面が `mutate` の第 2 引数のコールバックに書いている
@@ -77,7 +82,7 @@
 - 投入するエンドポイントの無いジョブ(定期実行など)の結合テストは、ジョブごとに 1 ファイルで `test/specs/jobs/` にあり、エンドポイントが投入するジョブの振る舞いは、そのエンドポイントのファイルで確かめている
 - エンドポイントを追加・変更した PR で、そのエンドポイントのファイルが、正常系・入力の形式・業務の規則・404・副作用を確かめている
 - 前提のデータを `test/factories/` の factory で作り、検証の対象のエンドポイントだけを HTTP で呼んでいる
-- 成功の応答の本文を `parseBody` で contracts の schema と照合して読んでいる
+- 成功の応答の本文を `parseBody` で contracts の schema と照合して読み、失敗の応答の `code` を `expectErrorCode` で確かめている
 - `fetch` で通信する外部サービスを MSW(`test/mocks/`)で受け、外へ出た要求を `test/mocks/` の関数から読んでいる。DI で差し替えているのが、HTTP の層で受けられない外部サービスの gateway とジョブキューだけになっている。`toHaveBeenCalledWith` を書いていない
 - ジョブの結果を、`ctx.jobs.drain()` のあとに確かめている。`vi.waitFor` でジョブの完了を待っていない
 - DB を直接読んで確かめているのが、応答からも外へ出た要求からも見分けられないものに限られている

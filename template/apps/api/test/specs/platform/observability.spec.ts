@@ -32,15 +32,41 @@ describe('応答の追跡とエラーの見え方', () => {
   describe('利用者の誤りで失敗したとき', () => {
     const ctx = useTestApp()
 
-    it('Nestの既定の形のまま返す', async () => {
+    it('失敗の原因を表すcodeを含む共通の形で返す', async () => {
       const response = await request(ctx.server())
         .delete(`/api/todos/${UNKNOWN_ID}`)
         .expect(404)
 
       expect(response.body).toEqual({
-        error: 'Not Found',
+        code: 'TODO_NOT_FOUND',
         message: 'todoが見つかりません',
         statusCode: 404,
+      })
+    })
+
+    it('存在しないルートは、codeがNOT_FOUNDの404を返す', async () => {
+      const response = await request(ctx.server())
+        .get('/api/no-such-route')
+        .expect(404)
+
+      expect(response.body).toEqual({
+        code: 'NOT_FOUND',
+        message: 'Cannot GET /api/no-such-route',
+        statusCode: 404,
+      })
+    })
+
+    it('入力の形式が不正なときは、項目ごとの不備をdetailsに入れた400を返す', async () => {
+      const response = await request(ctx.server())
+        .post('/api/todos')
+        .send({})
+        .expect(400)
+
+      expect(response.body).toEqual({
+        code: 'INVALID_REQUEST',
+        details: expect.any(Array) as unknown,
+        message: 'Bad Request Exception',
+        statusCode: 400,
       })
     })
   })
@@ -63,6 +89,7 @@ describe('応答の追跡とエラーの見え方', () => {
         .expect(500)
 
       expect(response.body).toEqual({
+        code: 'INTERNAL_ERROR',
         message: 'Internal server error',
         statusCode: 500,
       })

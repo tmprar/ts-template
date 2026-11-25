@@ -37,9 +37,25 @@ export const useTodos = () => {
     ...asMutationOptions(todoControllerCompleteMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
     onError: (error) => {
-      notify.error(error.response === undefined
-        ? '通信に失敗したため、todoを完了にできませんでした。通信状況をご確認のうえ、もう一度お試しください。'
-        : 'todoを完了にできませんでした。しばらくしてからもう一度お試しください。')
+      if (error.response === undefined) {
+        notify.error('通信に失敗したため、todoを完了にできませんでした。通信状況をご確認のうえ、もう一度お試しください。')
+
+        return
+      }
+
+      switch (error.response.data.code) {
+        case 'TODO_ALREADY_COMPLETED': {
+          notify.error('このtodoはすでに完了しています。')
+          break
+        }
+        case 'TODO_NOT_FOUND': {
+          notify.error('このtodoはすでに削除されています。')
+          break
+        }
+        default: {
+          notify.error('todoを完了にできませんでした。しばらくしてからもう一度お試しください。')
+        }
+      }
     },
   })
 
@@ -47,8 +63,14 @@ export const useTodos = () => {
     ...asMutationOptions(todoControllerRemoveMutation()),
     meta: { invalidates: [todosOptions.queryKey] },
     onError: (error) => {
-      notify.error(error.response === undefined
-        ? '通信に失敗したため、todoを削除できませんでした。通信状況をご確認のうえ、もう一度お試しください。'
+      if (error.response === undefined) {
+        notify.error('通信に失敗したため、todoを削除できませんでした。通信状況をご確認のうえ、もう一度お試しください。')
+
+        return
+      }
+
+      notify.error(error.response.data.code === 'TODO_NOT_FOUND'
+        ? 'このtodoはすでに削除されています。'
         : 'todoを削除できませんでした。しばらくしてからもう一度お試しください。')
     },
   })

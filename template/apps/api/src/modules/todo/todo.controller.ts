@@ -2,7 +2,9 @@ import {
   type CreateTodoInput,
   createTodoSchema,
   todoIdSchema,
+  type TodoListResponse,
   todoListResponseSchema,
+  type TodoResponse,
   todoResponseSchema,
 } from '@myapp/contracts'
 import {
@@ -17,14 +19,12 @@ import {
   Param,
   Post,
 } from '@nestjs/common'
-import {
-  ApiBadRequestResponse,
-  ApiConflictResponse,
-  ApiNotFoundResponse,
-} from '@nestjs/swagger'
 
 import { TodoUsecase } from '#app/modules/todo/todo.usecase.js'
-import { ApiResponse } from '#app/platform/http/index.js'
+import {
+  ApiErrorResponse,
+  ApiResponse,
+} from '#app/platform/http/index.js'
 
 @Controller('todos')
 export class TodoController {
@@ -35,22 +35,28 @@ export class TodoController {
    *
    * @remarks すでに完了しているtodoは409を返します。完了はメールで通知されます(送信は非同期で、応答は待ちません)。
    */
-  @ApiConflictResponse()
-  @ApiNotFoundResponse()
+  @ApiErrorResponse(400, ['INVALID_REQUEST'])
+  @ApiErrorResponse(409, ['TODO_ALREADY_COMPLETED'])
+  @ApiErrorResponse(404, ['TODO_NOT_FOUND'])
   @ApiResponse(todoResponseSchema)
   // Nest は POST を既定で 201 にする。新しいものは作らないので 200 で返す
   @HttpCode(HttpStatus.OK)
   @Post(':id/complete')
   public async complete(
     @Param('id', { schema: todoIdSchema }) id: string,
-  ) {
+  ): Promise<TodoResponse> {
     const completed = await this.usecase.completeTodo({ todoId: id })
 
     if (completed.isErr()) {
-      // 状態による拒否は409
       throw completed.error.type === 'AlreadyCompleted'
-        ? new ConflictException('すでに完了しています')
-        : new NotFoundException('todoが見つかりません')
+        ? new ConflictException({
+            code: 'TODO_ALREADY_COMPLETED',
+            message: 'すでに完了しています',
+          })
+        : new NotFoundException({
+            code: 'TODO_NOT_FOUND',
+            message: 'todoが見つかりません',
+          })
     }
 
     return {
@@ -69,12 +75,12 @@ export class TodoController {
    *
    * @remarks 件名は前後の空白を除いて1〜100文字です。
    */
-  @ApiBadRequestResponse()
+  @ApiErrorResponse(400, ['INVALID_REQUEST'])
   @ApiResponse(todoResponseSchema, 201)
   @Post()
   public async create(
     @Body({ schema: createTodoSchema }) body: CreateTodoInput,
-  ) {
+  ): Promise<TodoResponse> {
     const created = await this.usecase.createTodo({ title: body.title })
 
     return {
@@ -95,7 +101,7 @@ export class TodoController {
    */
   @ApiResponse(todoListResponseSchema)
   @Get()
-  public async findMany() {
+  public async findMany(): Promise<TodoListResponse> {
     const todos = await this.usecase.findTodos()
 
     return {
@@ -112,7 +118,8 @@ export class TodoController {
   /**
    * todoを削除
    */
-  @ApiNotFoundResponse()
+  @ApiErrorResponse(400, ['INVALID_REQUEST'])
+  @ApiErrorResponse(404, ['TODO_NOT_FOUND'])
   @ApiResponse()
   @Delete(':id')
   public async remove(
@@ -121,7 +128,10 @@ export class TodoController {
     const deleted = await this.usecase.deleteTodo({ todoId: id })
 
     if (deleted.isErr()) {
-      throw new NotFoundException('todoが見つかりません')
+      throw new NotFoundException({
+        code: 'TODO_NOT_FOUND',
+        message: 'todoが見つかりません',
+      })
     }
   }
 }

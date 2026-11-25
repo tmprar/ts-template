@@ -97,6 +97,10 @@ todo/
 - `Result` の失敗の型は、役割を問わずメソッドごとに定義する(`completeTodo` なら `CompleteTodoError`、`send` なら `SendMailError`)。
   そのメソッドで起こる失敗だけを判別共用体に並べて `type` で見分け、失敗の種類ごとに必要な値を持たせる
   (`{ type: 'TodoNotFound', todoId: string }`)。Repository・Gateway の interface のメソッドの失敗の型は Domain に定義する
+- Controller が投げる例外には、失敗の原因の `code` と開発者向けの `message` を渡す(`new ConflictException({ code: 'TODO_ALREADY_COMPLETED', message: '…' })`)。`code` は大文字のスネークケースで書き、エンドポイントが返す `code` を `@ApiErrorResponse(409, ['TODO_ALREADY_COMPLETED'])` で OpenAPI に出す。
+  `code` を渡さない例外(入力の検証の 400、存在しないルートの 404、想定外の 500)には、例外フィルタがステータスごとの既定の `code` を入れる。
+  `code` の一覧は定数で持たない。例外に渡す値は型で検査されないので、API の結合テストで `expectErrorCode` を使って確かめる。
+  web は HTTP ステータスや `message` ではなく `code` で分岐する
 - DTO の名前は、読む側の受け取るデータで付ける(todo そのものなら `TodoDto`、一覧の 1 行なら `TodoListItemDto`)。
   用途ごとに名前が分かれるので、同じ役割に DTO が増えても並べられる
 
@@ -182,7 +186,7 @@ todo/
   `queryKey` と取得・更新の関数は手で書かず、生成された `…Options()` / `…Mutation()`(`app/generated/api/@tanstack/vue-query.gen.ts`)を渡す。`…Mutation()` の戻り値をスプレッドするときは `asMutationOptions` を通す
 - 取得結果は、購読する画面が無くなったらキャッシュから削除する(`plugins/vue-query.ts` で QueryClient の既定の `gcTime` を 0 にしている)
 - 更新のあとに取得し直す取得は、`useMutation` の `meta.invalidates` に queryKey で書く。取得し直す処理は `plugins/vue-query.ts` の MutationCache の `onSettled` にだけ置く
-- 更新の失敗は `useMutation` の `onError` で `useNotify` の `error` を呼び、トーストで伝える。失敗は生成クライアント(hey-api の axios クライアント)が `AxiosError` で型付けする。接続の失敗は `error.response` が無いことで見分ける
+- 更新の失敗は `useMutation` の `onError` で `useNotify` の `error` を呼び、トーストで伝える。失敗は生成クライアント(hey-api の axios クライアント)が `AxiosError` で型付けする。接続の失敗は `error.response` が無いことで見分け、原因は `error.response.data.code` で分ける
 - composable は `useMutation` の `mutate` を操作の名前(`addTodo`)で返す。画面に固有の後処理(入力欄を空にするなど)は、画面が `mutate` の第 2 引数のコールバックに書く
 - 相対 import は使わない(`~` / `#shared` / `#server` のエイリアス)
 - props は分割代入せず `const props = defineProps<...>()` で受け、script でもテンプレートでも `props.x` と参照する。ESLint(`vue/define-props-destructuring` と自作の `local/no-bare-props-in-template`)で強制している
@@ -194,7 +198,7 @@ todo/
 ### テスト
 
 - API の結合テストは `apps/api/test/specs/` に、エンドポイント(`api/<資源>/<操作>.spec.ts`)・ジョブ(`jobs/`)・運用の契約(`platform/`)に分けて置く。
-  前提のデータは `test/factories/` の factory(fishery)で DB に作り、確かめる値は API の応答から読む。外部サービスは MSW(`test/mocks/`)が HTTP の層で受け、ジョブは `useTestApp` の `jobs.drain()` でその場で処理する
+  前提のデータは `test/factories/` の factory(fishery)で DB に作り、確かめる値は API の応答から読む。成功の応答は `parseBody` で contracts の schema と照合して読み、失敗の応答は `expectErrorCode` で `code` を確かめる。外部サービスは MSW(`test/mocks/`)が HTTP の層で受け、ジョブは `useTestApp` の `jobs.drain()` でその場で処理する
 - web は `app/utils/`・機能の `utils/` の純関数を単体で、画面と部品を Nuxt 環境の結合テスト(`apps/web/test/nuxt/specs/`)で確かめる。画面のテストは API の応答を MSW(`test/nuxt/mocks/`)で差し替え、利用者の操作から画面の表示とトーストまでを見る
 - カバレッジは単体と結合を合算して測る。全体と純関数の層のしきい値は各パッケージの `vitest.config.ts`、PR で変更した行のカバレッジの基準は `.github/workflows/ci.yml` にある
 
