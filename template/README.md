@@ -29,6 +29,8 @@ Claude Code で作業するときは、`jq` と Claude Code の CLI(`claude`)を
 
 PR を Claude Code でレビューさせるには(`.github/workflows/claude-code-review.yml`)、リポジトリの secrets に `CLAUDE_CODE_OAUTH_TOKEN`(`claude setup-token` で発行する)を設定する。PR やコメントで `@claude` と書くと、`.github/workflows/claude.yml` が応答する。
 
+依存は、`.npmrc` で指定した [Takumi Guard](https://flatt.tech/takumi/features/guard) のレジストリ(npm の公開レジストリへの代理で、悪意のあるパッケージを止める)から取得する。CI は GitHub の OIDC トークンで Takumi Guard に Bot として認証するので、Takumi Guard で Bot を登録し、その ID をリポジトリの variables に `TAKUMI_GUARD_BOT_ID` として設定する。
+
 ルートの `.env` は [dotenvx](https://dotenvx.com/) で値を暗号化してコミットしている。復号の鍵 `.env.keys` を既存の開発者から安全な経路で受け取り、ルートに置く。`.env.keys` はコミットしない。値の追加と変更は `pnpm exec dotenvx set <名前> <値>` で行う(暗号化した状態で書き込まれる)。
 
 開発者ごとに異なる値は `.env.local` に `pnpm exec dotenvx set -f .env.local <名前> <値>` で書く。`.env.local` はコミットせず、同じ名前の値は `.env` より優先される。

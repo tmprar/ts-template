@@ -100,8 +100,17 @@ jobs:
     needs: [changes]
     if: needs.changes.outputs.node == 'true'
     runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
       - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           cache: true
@@ -118,8 +127,17 @@ jobs:
     needs: [changes]
     if: needs.changes.outputs.text == 'true' || needs.changes.outputs.text-config == 'true'
     runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
       - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           cache: true
@@ -145,6 +163,8 @@ jobs:
       # main のカバレッジの artifact を、別のワークフローの実行から取得する
       actions: read
       contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
       # カバレッジのコメントを PR に付ける
       pull-requests: write
     steps:
@@ -152,6 +172,11 @@ jobs:
         with:
           # 差分のカバレッジは、比較の基準のブランチとの差分を読むので、履歴をすべて取得する
           fetch-depth: 0
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
       - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           cache: true
@@ -208,6 +233,8 @@ jobs:
       # main のカバレッジの artifact を、別のワークフローの実行から取得する
       actions: read
       contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
       # カバレッジのコメントを PR に付ける
       pull-requests: write
     steps:
@@ -215,6 +242,11 @@ jobs:
         with:
           # 差分のカバレッジは、比較の基準のブランチとの差分を読むので、履歴をすべて取得する
           fetch-depth: 0
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
       - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
         with:
           cache: true
