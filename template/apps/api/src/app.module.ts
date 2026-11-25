@@ -1,5 +1,4 @@
 import { ClsPluginTransactional } from '@nestjs-cls/transactional'
-import { TransactionalAdapterDrizzleOrm } from '@nestjs-cls/transactional-adapter-drizzle-orm'
 import { Module } from '@nestjs/common'
 import { SentryModule } from '@sentry/nestjs/setup'
 import { ClsModule } from 'nestjs-cls'
@@ -9,6 +8,7 @@ import { AppConfigModule } from '#app/platform/config/index.js'
 import {
   DRIZZLE,
   DrizzleModule,
+  DrizzleTransactionalAdapter,
 } from '#app/platform/drizzle/index.js'
 import { HealthModule } from '#app/platform/health/index.js'
 import { LoggingModule } from '#app/platform/logging/index.js'
@@ -26,7 +26,7 @@ import { LoggingModule } from '#app/platform/logging/index.js'
       middleware: { mount: true },
       plugins: [
         new ClsPluginTransactional({
-          adapter: new TransactionalAdapterDrizzleOrm({
+          adapter: new DrizzleTransactionalAdapter({
             drizzleInstanceToken: DRIZZLE,
           }),
           imports: [DrizzleModule],
