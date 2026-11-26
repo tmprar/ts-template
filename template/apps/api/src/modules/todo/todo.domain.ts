@@ -14,15 +14,15 @@ import path from 'node:path'
  */
 
 /**
-todoの完了の失敗
-*/
+ * todoの完了の失敗
+ */
 export type CompleteTodoError = {
   type: 'AlreadyCompleted'
 }
 
 /**
-todoの状態
-*/
+ * todoの状態
+ */
 export const TodoStatus = {
   Completed: 'completed',
   Incomplete: 'incomplete',
@@ -44,6 +44,9 @@ export class Todo {
   public readonly id: string
   public readonly title: string
 
+  /**
+   * 完了日時から決まる todo の状態
+   */
   public get status(): TodoStatus {
     return deriveTodoStatus(this.completedAt)
   }
@@ -109,24 +112,36 @@ export const TODO_REPOSITORY = Symbol('TodoRepository')
  * todoの永続化
  */
 export interface TodoRepository {
+  /**
+   * 新しい todo を保存する
+   */
   addTodo(todo: Todo): Promise<void>
+  /**
+   * todo を削除する
+   */
   deleteTodo(todo: Todo): Promise<void>
+  /**
+   * `todoId` の todo を返す。無ければ undefined を返す
+   */
   findTodo(todoId: string): Promise<Todo | undefined>
+  /**
+   * 保存済みの todo を、渡した内容に書き換える
+   */
   updateTodo(todo: Todo): Promise<void>
 }
 
 /**
-メールの本文のテンプレート(eta)。モジュールの assets/ に置く。
-平文で送るので、HTMLのエスケープはしない
-*/
+ * メールの本文のテンプレート(eta)。モジュールの assets/ に置く。
+ * 平文で送るので、HTMLのエスケープはしない
+ */
 const eta = new Eta({
   autoEscape: false,
   views: path.join(import.meta.dirname, 'assets'),
 })
 
 /**
-todoの完了を知らせるメール
-*/
+ * todoの完了を知らせるメール
+ */
 export type CompletedTodoMail = {
   body: string
   subject: string

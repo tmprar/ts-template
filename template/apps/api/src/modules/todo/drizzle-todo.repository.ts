@@ -37,6 +37,9 @@ export class DrizzleTodoRepository implements TodoRepository {
     await this.txHost.tx.delete(todos).where(eq(todos.id, todo.id))
   }
 
+  /**
+   * `todoId` の todo を返す。無ければ undefined を返す
+   */
   public async findTodo(todoId: string): Promise<Todo | undefined> {
     const [row] = await this.txHost.tx
       .select()

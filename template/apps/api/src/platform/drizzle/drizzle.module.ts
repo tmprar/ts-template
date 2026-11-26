@@ -12,9 +12,6 @@ import { AppConfigService } from '#app/platform/config/index.js'
 
 export const DRIZZLE = Symbol('DRIZZLE')
 
-/**
-TransactionHost<DrizzleAdapter> の型引数に使う
-*/
 export type DrizzleAdapter
   = TransactionalAdapterDrizzleOrm<DrizzleDb>
 

@@ -19,6 +19,9 @@ const eslint = new ESLint({
   ignore: false,
 })
 
+/**
+ * `fixture` のファイルを ESLint で検査し、報告された指摘を返す
+ */
 const messagesOf = async (fixture: string) => {
   const [result] = await eslint.lintFiles([`test/eslint/fixtures/${fixture}`])
 

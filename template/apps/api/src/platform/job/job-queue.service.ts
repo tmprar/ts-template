@@ -19,13 +19,13 @@ import type { DrizzleAdapter } from '#app/platform/drizzle/index.js'
 import { AppConfigService } from '#app/platform/config/index.js'
 
 /**
-投入直後の実行遅延を抑えるためポーリングは最短にする
-*/
+ * ジョブを投入してから実行するまでの遅延を抑えるため、ポーリングの間隔は最短にする
+ */
 const POLLING_INTERVAL_SECONDS = 0.5
 
 /**
-ジョブのリトライ方針。仕事の持ち主が許容する遅延に応じて決める
-*/
+ * 値は JobQueueService では決めない。仕事を所有するモジュールが、許容できる遅延に応じて決める
+ */
 export type JobRetryPolicy = {
   retryBackoff: boolean
   retryDelay: number
@@ -34,8 +34,9 @@ export type JobRetryPolicy = {
 }
 
 /**
- * pg-bossによるジョブキュー基盤。投入・ワーカー登録・ライフサイクルのみを担い、
- * ジョブの中身は知らない。ハンドラはその仕事を所有するモジュールが登録する
+ * ジョブの投入・ワーカーの登録・pg-boss の開始と停止を行う。
+ * ジョブのハンドラはこのクラスに置かない。このクラスはジョブの内容に依存せず、
+ * ハンドラは、その仕事を所有するモジュールが登録する
  */
 @Injectable()
 export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
@@ -50,11 +51,10 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
   }
 
   /**
-   * ジョブを投入する。呼び出し元のトランザクションに相乗りさせるため、
-   * pg-boss自身のプールではなく現在の接続でINSERTする。
-   * これにより業務データとジョブが同一トランザクションで原子的にコミットされ、
-   * ロールバック時に幽霊ジョブが残らない。
-   * トランザクション外から呼んだ場合はルート接続での単独INSERTになる
+   * `queue` のキューへ `data` を持つジョブを 1 件投入し、トランザクションの中から呼んだ場合はジョブのINSERTをそのトランザクションに含め、
+   * 外から呼んだ場合はルート接続での単独のINSERTにする。pg-boss が未開始のときは例外を投げる。
+   * pg-boss自身のプールではなく現在の接続でINSERTする。pg-boss自身のプールでINSERTすると、ジョブが業務データと
+   * 別のトランザクションになり、ロールバックしたときに、対応する業務データが存在しないジョブが残るため
    */
   public async enqueue(queue: string, data: object): Promise<void> {
     await this.requireBoss().send(queue, data, {
@@ -62,14 +62,20 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
     })
   }
 
+  /**
+   * プロセスの終了時(SIGTERM など)に Nest から呼ばれ、ジョブワーカー(pg-boss)を停止する
+   */
   public async onApplicationShutdown(): Promise<void> {
     await this.boss?.stop()
   }
 
+  /**
+   * アプリの起動時に Nest から呼ばれ、pg-boss を開始して enqueue と register を呼べる状態にし、以後に pg-boss 内部で起きたエラーをログに記録して Sentry へ送る
+   */
   public async onModuleInit(): Promise<void> {
     const boss = new PgBoss(this.config.get('DATABASE_URL', { infer: true }))
 
-    // pg-boss 内部(ポーリング・メンテナンス)のエラーはここにしか出ない
+    // pg-boss 内部(ポーリング・メンテナンス)のエラーは、この error イベントでしか受け取れない
     boss.on('error', (error) => {
       this.logger.error({
         err: error,
@@ -82,10 +88,10 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
   }
 
   /**
-   * キューを作成し、ワーカーを登録する。
-   * 呼び出し側(ジョブの持ち主)のonModuleInitから呼ぶ。
-   * deadLetterを指定するとリトライ上限に達したジョブがそのキューへ移送される。
-   * 移送先はここでも作成するため、両キューの登録順に依存しない
+   * `queue` のキューを `retryPolicy` 付きで作り、そのキューのジョブのデータを `handler` に渡して実行するワーカーを登録する。
+   * deadLetter を指定すると、deadLetter のキューも作り、リトライの上限に達したジョブが移される先にする。pg-boss が未開始のときは例外を投げる。
+   * pg-boss はこのクラスの onModuleInit で開始されるため、仕事を所有するモジュールは自分の onModuleInit から呼ぶ。
+   * deadLetter のキューはこのメソッドでも作るため、元のキューと deadLetter のキューはどちらを先に登録してもよい
    */
   public async register<T extends object>(
     queue: string,
@@ -95,7 +101,7 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
   ): Promise<void> {
     const boss = this.requireBoss()
 
-    // pg-bossはdeadLetterキー自体の有無を検証するため、条件付きで展開する
+    // deadLetterを指定しないときは、deadLetterのキーをオプションに含めない。pg-bossはdeadLetterというキーがあるかどうか自体を検証するため
     if (options) {
       await boss.createQueue(options.deadLetter)
       await boss.createQueue(queue, {
@@ -106,7 +112,6 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
       await boss.createQueue(queue, retryPolicy)
     }
 
-    // T を明示すると options の型推論(const O)が効かなくなるため、メタデータ付きの型も明示する
     await boss.work<T, unknown, {
       includeMetadata: true
       pollingIntervalSeconds: number
@@ -124,6 +129,21 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
     )
   }
 
+  /**
+   * `queue` のキューへ、`cron`(UTC で解釈する cron 式)の時刻ごとに、データが空のジョブを投入するよう登録する。
+   * 同じキューの登録は置き換わるので、起動のたびに呼んでよい。キューは先に register で作っておく。pg-boss が未開始のときは例外を投げる。
+   * 停止やデプロイで投入の時刻を過ぎたときは、過ぎた回の数にかかわらず 1 件だけ投入させる。既定の skip では、投入の時刻に毎回デプロイが重なると、その仕事が一度も実行されないため
+   */
+  public async schedule(queue: string, cron: string): Promise<void> {
+    await this.requireBoss().schedule(queue, cron, {}, {
+      missed: 'once',
+      tz: 'UTC',
+    })
+  }
+
+  /**
+   * 開始済みの pg-boss を返す。onModuleInit が完了する前に呼ぶと例外を投げる
+   */
   private requireBoss(): PgBoss {
     const boss = this.boss
 
@@ -135,9 +155,9 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
   }
 
   /**
-   * ハンドラの失敗をログに残してからリトライに委ねる。リトライが尽きた(諦めた)ジョブは
-   * error にし、監視のメトリクスフィルタで拾う。deadLetter があれば移送先の
-   * ハンドラが後始末をする
+   * ジョブのデータを `handler` に渡して実行し、`handler` が例外を投げたときは、リトライが残っていれば warn で、
+   * リトライの上限に達していれば error で記録して Sentry へ送り、同じ例外を投げ直す。
+   * 投げ直すのは、pg-boss にリトライさせるため
    */
   private async run<T extends object>(
     job: JobWithMetadata<T>,
@@ -158,7 +178,6 @@ export class JobQueueService implements OnApplicationShutdown, OnModuleInit {
 
       if (isAbandoned) {
         this.logger.error(fields, 'ジョブのリトライが尽きました')
-        // 諦めたものだけ Sentry へ。リトライ中の失敗は送らない
         Sentry.captureException(error, {
           tags: {
             job_id: job.id,

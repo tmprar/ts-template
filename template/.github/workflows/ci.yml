@@ -1,8 +1,11 @@
 # PR で検査する。lefthook はコミット時に staged ファイルだけを見るので、全体の検査は CI を正とする。
+# pnpm のストアのキャッシュは、復元だけを行い保存しない(pnpm/setup の save-cache: false)。PR の実行で保存したキャッシュは、
+# ほかの PR からは復元できないまま、リポジトリのキャッシュの容量を使うため。保存は pnpm-cache.yml だけが行う
 name: ci
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # 同じブランチの古い run は打ち切る
 concurrency:
@@ -16,8 +19,13 @@ jobs:
   # 変更のあった領域を判定し、各ジョブを必要なときだけ走らせる(docs だけの PR で何も走らせない)。
   # ジョブ単位の skip は「skipped」として結果を報告するので required checks と両立する
   # (workflow の paths で絞ると結果が報告されず PR をマージできなくなる)
+  # 検査のジョブはすべて changes に依存するので、draft の条件は changes にだけ付け、検査のジョブごとには付けない。
+  # draft を外したときに検査するよう、ready_for_review でも起動する。
+  # runner は 1 分あたりの料金で選ぶ。Docker も 2 コアも要らない短いジョブは ubuntu-slim(1 コアのコンテナで、15 分で打ち切られる)、
+  # それ以外は ubuntu-24.04-arm にする。arm64 は x64 の同じ 2 コアより安く、依存とテストの DB のイメージが arm64 に対応している
   changes:
-    runs-on: ubuntu-24.04
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       # pull_request では PR の変更ファイル一覧を API から取るので要る
@@ -26,11 +34,23 @@ jobs:
       node: ${{ steps.filter.outputs.node }}
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
+      text: ${{ steps.filter.outputs.text }}
+      text-files: ${{ steps.filter.outputs.text_files }}
+      text-config: ${{ steps.filter.outputs.text-config }}
+      review-scripts: ${{ steps.filter.outputs.review-scripts }}
+      adr: ${{ steps.filter.outputs.adr }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
         with:
+          # lint-text が、PR で変えた Markdown だけを検査できるよう、変更したファイルの一覧を出力させる
+          list-files: json
+          # some-with-excludes は、肯定のパターンのどれかに一致し、`!` のパターンのどれにも一致しない
+          # ファイルを変更とみなす。既定の some は `!` のパターンも「その glob に一致しない」という
+          # 独立した条件として OR で判定するため、`!**/*.md` が .md 以外のすべてのファイルに一致し、
+          # 除外として働かない
+          predicate-quantifier: some-with-excludes
           filters: |
             shared: &shared
               - 'packages/**'
@@ -45,109 +65,257 @@ jobs:
               - *shared
               - 'apps/**'
             # api の単体・結合
+            # api の単体・結合と、差分のカバレッジのスクリプト
             api:
               - *shared
               - 'apps/api/**'
+              - '.github/scripts/diff-coverage/**'
             # web の単体・結合。API クライアントは api の OpenAPI から生成するので apps/api/src も見る
             web:
               - *shared
               - 'apps/web/**'
               - 'apps/api/src/**'
+              - '.github/scripts/diff-coverage/**'
+            adr:
+              - 'docs/adr/**'
+              - '.adr-dir'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/install-adrs/**'
+            review-scripts:
+              - '.github/scripts/claude-review/**'
+              - '.github/scripts/diff-coverage/**'
+              - '.github/workflows/ci.yml'
+            # 検査しないファイルは .textlintignore に書き、textlint が無視する
+            text:
+              - '**/*.md'
+            text-config:
+              - '.textlintrc.json'
+              - '.textlintignore'
+              - 'prh.yml'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/ci.yml'
 
   # 静的検査: ESLint・型検査・循環 import の検出(全パッケージ)
   check:
     needs: [changes]
     if: needs.changes.outputs.node == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6.1.0
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
         with:
-          node-version-file: package.json
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          require-lockfile: true
+          save-cache: false
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm depcruise
 
-  # api の単体(純関数)。カバレッジを測り、PR にコメントする
-  api-unit:
+  # 日本語の文章の検査。textlint はルートの依存なので、ワークスペース全体ではなくルートの依存だけを入れる。
+  # 設定を変えていない PR では、ほかの文書の検査の結果は main と変わらないので、PR で変えた Markdown だけを検査する。
+  # textlint の設定を変えたときは、今までの文書が新しい規則に通るかを確かめるため、pnpm lint:text で対象の文書をすべて検査する
+  lint-text:
     needs: [changes]
-    if: needs.changes.outputs.api == 'true'
-    runs-on: ubuntu-24.04
+    if: needs.changes.outputs.text == 'true' || needs.changes.outputs.text-config == 'true'
+    runs-on: ubuntu-slim
     permissions:
       contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          # textlint はルートの devDependencies だけで動くので、pnpm/setup には install させず、ルートだけを install する
+          install: false
+          save-cache: false
+      - run: pnpm install --frozen-lockfile --filter myapp
+      - if: needs.changes.outputs.text-config == 'true'
+        run: pnpm lint:text
+      - if: needs.changes.outputs.text-config != 'true'
+        env:
+          FILES: ${{ needs.changes.outputs.text-files }}
+        # 一覧には PR で消したファイルも入るので、存在するファイルだけを渡す
+        run: jq -r '.[]' <<<"$FILES" | while IFS= read -r f; do if [ -f "$f" ]; then printf '%s\n' "$f"; fi; done | xargs -d '\n' -r pnpm exec textlint
+
+  # api の単体と結合を 1 回の実行にまとめ、カバレッジを合算して PR にコメントする。
+  # 結合の DB は testcontainers が起動するので compose も .env も要らない
+  test-api:
+    needs: [changes]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      # main のカバレッジの artifact を、別のワークフローの実行から取得する
+      actions: read
+      contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
       # カバレッジのコメントを PR に付ける
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6.1.0
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          node-version-file: package.json
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          # 差分のカバレッジは、比較の基準のブランチとの差分を読むので、履歴をすべて取得する
+          fetch-depth: 0
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          require-lockfile: true
+          save-cache: false
       - run: pnpm test:cov --filter @myapp/api
-      # テストが失敗しても出ている分のレポートは載せる
+      # main のカバレッジは coverage-baseline.yml が保存する。artifact が無いとき(保存期間を過ぎたときなど)や取得に失敗したときも
+      # ジョブを失敗させず、差分のカバレッジは main との増減を省いて出す
+      - name: Download baseline coverage
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=coverage-baseline-api&per_page=20" \
+            --jq '[.artifacts[] | select(.expired | not) | select(.workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$id" ]; then
+            echo "main のカバレッジの artifact が無い"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/baseline.zip"
+          unzip -o -q "$RUNNER_TEMP/baseline.zip" -d "$RUNNER_TEMP/baseline"
+      # テストが失敗しても、出力済みのカバレッジのレポートは PR のコメントに載せる
       - if: always()
-        uses: davelosert/vitest-coverage-report-action@v2
+        uses: davelosert/vitest-coverage-report-action@74c2d9210b4fc44c84d8213f61d7ec99837b7aa0 # v2
         with:
           name: api
           working-directory: apps/api
+      # 変更した行のカバレッジが 80% を下回ると失敗させ、通っていない行に注記を付ける
+      - name: Diff coverage
+        id: diff-coverage
+        if: always() && hashFiles('apps/api/coverage/coverage-final.json') != ''
+        env:
+          # リンク先は、PR の head ではなく、テストと差分の行番号の元になった merge コミットにする。head にすると、main が同じファイルを
+          # 変えていたときに行番号がずれる
+          DIFF_COVERAGE_BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}
+          DIFF_COVERAGE_OUTPUT: ${{ runner.temp }}/diff-coverage.md
+          DIFF_COVERAGE_BASELINE: ${{ runner.temp }}/baseline/coverage-summary.json
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/index.mjs apps/api/coverage "origin/${{ github.base_ref }}" apps/api 80
+      - name: Diff coverage comment
+        if: always() && steps.diff-coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/comment.mjs api "$RUNNER_TEMP/diff-coverage.md"
 
-  # api の結合。DB は testcontainers が起動するので compose も .env も要らない。
-  # vitest がファイル単位で並列実行し worker ごとに専用 DB を持つ。テスト本体は十数秒で
-  # ジョブの固定費(install・イメージ取得)の方が大きいため、シャード分割はしていない
-  api-integration:
-    needs: [changes]
-    if: needs.changes.outputs.api == 'true'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6.1.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: package.json
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test:integration --filter @myapp/api
-
-  # web の単体(純関数と ESLint ルール)。カバレッジを測り、PR にコメントする
-  web-unit:
+  # web の単体と結合(Nuxt 環境)を 1 回の実行にまとめ、カバレッジを合算して PR にコメントする
+  test-web:
     needs: [changes]
     if: needs.changes.outputs.web == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     permissions:
+      # main のカバレッジの artifact を、別のワークフローの実行から取得する
+      actions: read
       contents: read
+      # Takumi Guard に Bot として認証するため、GitHub の OIDC トークンを発行する
+      id-token: write
+      # カバレッジのコメントを PR に付ける
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6.1.0
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          node-version-file: package.json
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          # 差分のカバレッジは、比較の基準のブランチとの差分を読むので、履歴をすべて取得する
+          fetch-depth: 0
+      - uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1.4.0
+        with:
+          bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
+          # レジストリはローカルと CI で同じ設定を使うよう .npmrc で指定しているので、この action には認証だけを任せる
+          set-registry: false
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: true
+          require-lockfile: true
+          save-cache: false
       - run: pnpm test:cov --filter @myapp/web
+      # main のカバレッジは coverage-baseline.yml が保存する。artifact が無いとき(保存期間を過ぎたときなど)や取得に失敗したときも
+      # ジョブを失敗させず、差分のカバレッジは main との増減を省いて出す
+      - name: Download baseline coverage
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=coverage-baseline-web&per_page=20" \
+            --jq '[.artifacts[] | select(.expired | not) | select(.workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$id" ]; then
+            echo "main のカバレッジの artifact が無い"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/baseline.zip"
+          unzip -o -q "$RUNNER_TEMP/baseline.zip" -d "$RUNNER_TEMP/baseline"
+      # テストが失敗しても、出力済みのカバレッジのレポートは PR のコメントに載せる
       - if: always()
-        uses: davelosert/vitest-coverage-report-action@v2
+        uses: davelosert/vitest-coverage-report-action@74c2d9210b4fc44c84d8213f61d7ec99837b7aa0 # v2
         with:
           name: web
           working-directory: apps/web
+      # 変更した行のカバレッジが 80% を下回ると失敗させ、通っていない行に注記を付ける
+      - name: Diff coverage
+        id: diff-coverage
+        if: always() && hashFiles('apps/web/coverage/coverage-final.json') != ''
+        env:
+          # リンク先は、PR の head ではなく、テストと差分の行番号の元になった merge コミットにする。head にすると、main が同じファイルを
+          # 変えていたときに行番号がずれる
+          DIFF_COVERAGE_BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}
+          DIFF_COVERAGE_OUTPUT: ${{ runner.temp }}/diff-coverage.md
+          DIFF_COVERAGE_BASELINE: ${{ runner.temp }}/baseline/coverage-summary.json
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/index.mjs apps/web/coverage "origin/${{ github.base_ref }}" apps/web 80
+      - name: Diff coverage comment
+        if: always() && steps.diff-coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/scripts/diff-coverage/comment.mjs web "$RUNNER_TEMP/diff-coverage.md"
 
-  # web の結合(Nuxt 環境でのコンポーネント・composable)。サーバもブラウザも起動しない
-  web-integration:
+  # ADR の検査(番号の重複・リンク切れ・空の節)。lint に入れず別のジョブにする。lint は docs だけの PR では実行しないため
+  lint-adr:
     needs: [changes]
-    if: needs.changes.outputs.web == 'true'
-    runs-on: ubuntu-24.04
+    if: needs.changes.outputs.adr == 'true'
+    runs-on: ubuntu-slim
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v6.1.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: package.json
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test:integration --filter @myapp/web
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install adrs
+        uses: ./.github/actions/install-adrs
+      # 空の節は warning で、既定では終了コードが 0 になるため、warning でも失敗させる
+      - run: adrs doctor --warnings-as-errors
 
+  # CI の補助のスクリプト(Claude のレビューの投稿、差分のカバレッジ)の単体テスト。
+  # スクリプトはどのパッケージにも属さず、依存も無いため、pnpm install をせずに Node の組み込みのテストランナーで実行する
+  test-review-scripts:
+    needs: [changes]
+    if: needs.changes.outputs.review-scripts == 'true'
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@731dfb6463bbd11c11fd0ee11fe00ed0e36d48a1 # v3.2.0
+        with:
+          cache: false
+          install: false
+      - run: node --test '.github/scripts/claude-review/*.test.mjs' '.github/scripts/diff-coverage/*.test.mjs'

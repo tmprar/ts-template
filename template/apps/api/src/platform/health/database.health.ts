@@ -14,8 +14,7 @@ import {
 } from '#app/platform/drizzle/index.js'
 
 /**
- * PostgreSQL に届くかを `select 1` で確かめる。terminus に Drizzle 用の
- * 組み込みが無いため自前で持つ。タイムアウトは呼び出し側が `withTimeout` で付ける
+ * terminus の組み込みの indicator は使わない。terminus に Drizzle 用の indicator が無いため
  */
 @Injectable()
 export class DatabaseHealthIndicator {
@@ -24,6 +23,9 @@ export class DatabaseHealthIndicator {
     private readonly healthIndicator: HealthIndicatorService,
   ) {}
 
+  /**
+   * DB へ問い合わせを 1 回送り、成功すれば `key` の項目を up、問い合わせが例外を投げれば down とする確認(`HealthCheckAttempt`)を返す
+   */
   public check(key: string): HealthCheckAttempt {
     return this.healthIndicator
       .check(key)

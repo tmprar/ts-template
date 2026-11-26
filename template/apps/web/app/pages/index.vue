@@ -4,80 +4,38 @@ import {
   createTodoSchema,
 } from '@myapp/contracts'
 
-import { countTodosByStatus } from '~/domain/todo'
+import {
+  countTodosByStatus,
+  TodoList,
+  TodoListItem,
+  useTodos,
+} from '~/features/todo'
 
 /**
  * todoの一覧(構成を示すためのサンプル画面)。
- * ここはImperative Shellとして、入力の状態とcomposable・Coreの呼び出しだけを持つ
+ * 画面の中身はルートのファイルに書き、取得と更新は機能のcomposableに任せる
  */
 useHead({ title: 'todo' })
 
-const { addTodo, completeTodo, removeTodo, status, todos } = useTodos()
-const toast = useToast()
+const { addTodo, completeTodo, isAdding, isPending, removeTodo, todos } = useTodos()
 
 /**
-追加フォームの入力。検証はcontractsのスキーマ(APIの入口と同じもの)で行う
-*/
+ * 追加フォームの入力。検証はcontractsのスキーマ(APIの入口と同じもの)で行う
+ */
 const form = reactive({ title: '' })
-
-/**
-追加の通信中。ボタンの多重押下を止める
-*/
-const isAdding = ref(false)
 
 const todoCount = computed(() => countTodosByStatus(todos.value ?? []))
 
 /**
- * 検証を通った入力(前後の空白を除いた件名)でtodoを追加する
+ * 検証を通った入力(前後の空白を除いた件名)でtodoを追加し、追加できたら入力欄を空にする。
+ * 失敗の案内はcomposableがトーストで出すので、画面は成功したときの後処理だけを書く
  */
-const submit = async (input: CreateTodoInput) => {
-  isAdding.value = true
-
-  /*
-    想定できる失敗はResultで返るが、想定外の例外でも通信中の表示を残さないよう
-    finallyで戻す(戻し忘れるとボタンが押せないままになる)
-  */
-  try {
-    const result = await addTodo(input.title)
-
-    if (result.isErr()) {
-      toast.add({
-        color: 'error',
-        description: '通信状況をご確認のうえ、もう一度お試しください。',
-        title: 'todoを追加できませんでした',
-      })
-
-      return
-    }
-
-    form.title = ''
-  } finally {
-    isAdding.value = false
-  }
-}
-
-const complete = async (id: string) => {
-  const result = await completeTodo(id)
-
-  if (result.isErr()) {
-    toast.add({
-      color: 'error',
-      description: '通信状況をご確認のうえ、もう一度お試しください。',
-      title: 'todoを完了にできませんでした',
-    })
-  }
-}
-
-const remove = async (id: string) => {
-  const result = await removeTodo(id)
-
-  if (result.isErr()) {
-    toast.add({
-      color: 'error',
-      description: '通信状況をご確認のうえ、もう一度お試しください。',
-      title: 'todoを削除できませんでした',
-    })
-  }
+const submit = (input: CreateTodoInput) => {
+  addTodo({ body: { title: input.title } }, {
+    onSuccess: () => {
+      form.title = ''
+    },
+  })
 }
 </script>
 
@@ -119,7 +77,7 @@ const remove = async (id: string) => {
       </UForm>
 
       <p
-        v-if="status === 'pending' || status === 'idle'"
+        v-if="isPending"
         aria-busy="true"
         class="text-sm text-muted"
       >
@@ -146,8 +104,8 @@ const remove = async (id: string) => {
           v-for="todo in todos"
           :key="todo.id"
           :item="todo"
-          @complete="complete($event)"
-          @remove="remove($event)"
+          @complete="completeTodo({ path: { id: $event } })"
+          @remove="removeTodo({ path: { id: $event } })"
         />
       </TodoList>
     </div>

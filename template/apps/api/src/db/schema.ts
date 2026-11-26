@@ -19,12 +19,12 @@ const timestamps = {
 }
 
 /**
-todo(todoモジュール所有)
-*/
+ * todo(todoモジュール所有)
+ */
 export const todos = pgTable('todos', {
   /**
-  完了した日時。状態はカラムに持たず、この値から導出する
-  */
+   * 完了した日時。状態はカラムに持たず、この値から導出する
+   */
   completedAt: timestamp('completed_at', { withTimezone: true }),
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),

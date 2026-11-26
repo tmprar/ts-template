@@ -1,0 +1,10 @@
+{
+  // dependency-cruiserが ~/* を解決するためだけの設定。型検査には使わない。
+  // .nuxt/tsconfig.app.json を渡さないのは、pathsが .nuxt からの相対パスで書かれているのに対し、dependency-cruiserは
+  // baseUrlの無いtsconfigのpathsを、実行したディレクトリからの相対パスとして解決し、~/* を解決できないためである
+  "compilerOptions": {
+    "paths": {
+      "~/*": ["./app/*"]
+    }
+  }
+}

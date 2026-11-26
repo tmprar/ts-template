@@ -1,0 +1,10 @@
+# push の前のレビュー(review.sh)の基準になるファイル。1 行に 1 つ、git の pathspec のパターンで書く。
+# ここに並べたファイルを変えると、前に点検に通った差分も、新しい基準で点検し直す。
+# japanese-prose のスキルは、conventions の観点が CLAUDE.md の「文章」を通じて参照している
+CLAUDE.md
+docs/workflow.md
+docs/review/*.md
+.claude/skills/japanese-prose/SKILL.md
+.claude/hooks/review.sh
+.claude/hooks/review.rules
+.claude/hooks/lib/review.sh

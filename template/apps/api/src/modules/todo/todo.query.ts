@@ -11,8 +11,8 @@ import {
 } from '#app/modules/todo/todo.domain.js'
 
 /**
-一覧に出すtodo
-*/
+ * 一覧に出すtodo
+ */
 export type TodoListItemDto = {
   completedAt: Date | null
   createdAt: Date

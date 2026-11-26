@@ -10,4 +10,5 @@ docs
 apps/infra/cdk.out
 .git
 .env
+.env.keys
 *.png

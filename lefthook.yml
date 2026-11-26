@@ -20,31 +20,54 @@ pre-commit:
 
     - name: lint-api
       root: template/apps/api/
-      glob: 'template/apps/api/{src,test}/**/*.ts'
+      glob: 'template/apps/api/**/*.{ts,mjs}'
+      exclude: ['template/apps/api/eslint.config.mjs', 'template/apps/api/.dependency-cruiser.mjs']
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
     - name: lint-contracts
       root: template/packages/contracts/
-      glob: 'template/packages/contracts/src/**/*.ts'
+      glob: 'template/packages/contracts/**/*.{ts,mjs}'
+      exclude: ['template/packages/contracts/eslint.config.mjs', 'template/packages/contracts/dist/**']
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
-    - name: lint-web
-      root: template/apps/web/
-      glob: 'template/apps/web/{app,shared,server}/**/*.{ts,vue}'
+    - name: lint-infra
+      root: template/apps/infra/
+      glob: 'template/apps/infra/**/*.{ts,mjs}'
+      exclude: ['template/apps/infra/eslint.config.mjs', 'template/apps/infra/cdk.out/**']
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
     - name: depcruise
       root: template/
-      glob: 'template/apps/api/{src,test}/**/*.ts'
+      glob: '{template/apps/api/{src,test}/**/*.ts,template/apps/web/app/**/*.{ts,vue}}'
       run: pnpm turbo depcruise
 
-    - name: typecheck
+    # lint-web と typecheck は順に実行する(理由は template/lefthook.yml)
+    - group:
+        parallel: false
+        jobs:
+          - name: lint-web
+            root: template/apps/web/
+            glob: 'template/apps/web/{app,shared,server}/**/*.{ts,vue}'
+            run: pnpm exec eslint {staged_files} --fix
+            stage_fixed: true
+
+          - name: typecheck
+            root: template/
+            glob: 'template/**/*.{ts,vue}'
+            run: pnpm turbo typecheck
+
+    - name: lint-text
       root: template/
-      glob: 'template/**/*.{ts,vue}'
-      run: pnpm turbo typecheck
+      glob: 'template/**/*.md'
+      run: pnpm exec textlint {staged_files}
+
+    - name: adr-doctor
+      root: template/
+      glob: '{template/docs/adr/**,template/.adr-dir}'
+      run: adrs doctor --warnings-as-errors
 
 commit-msg:
   jobs:

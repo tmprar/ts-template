@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.build.json",
+  // pnpm dev で起動中の API は dist/ から動くので、openapi.json の生成のためのビルドは .out/server/ に出力する。
+  // dist/ に出力すると、nest build が dist/ を消して作り直し、起動中の API が再起動する。
+  // ビルドしたコードの #app/* は、package.json の imports の openapi の条件で .out/server/ に解決させる
+  "compilerOptions": {
+    "outDir": "./.out/server",
+    "tsBuildInfoFile": "./.out/server/tsconfig.openapi.tsbuildinfo"
+  }
+}

@@ -5,29 +5,54 @@ pre-commit:
   jobs:
     - name: lint-api
       root: apps/api/
-      glob: 'apps/api/{src,test}/**/*.ts'
+      glob: 'apps/api/**/*.{ts,mjs}'
+      exclude: ['apps/api/eslint.config.mjs', 'apps/api/.dependency-cruiser.mjs']
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
     - name: lint-contracts
       root: packages/contracts/
-      glob: 'packages/contracts/src/**/*.ts'
+      glob: 'packages/contracts/**/*.{ts,mjs}'
+      exclude: ['packages/contracts/eslint.config.mjs', 'packages/contracts/dist/**']
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
-    - name: lint-web
-      root: apps/web/
-      glob: 'apps/web/{app,shared,server}/**/*.{ts,vue}'
+    - name: lint-infra
+      root: apps/infra/
+      glob: 'apps/infra/**/*.{ts,mjs}'
+      exclude: ['apps/infra/eslint.config.mjs', 'apps/infra/cdk.out/**']
       run: pnpm exec eslint {staged_files} --fix
       stage_fixed: true
 
     - name: depcruise
-      glob: 'apps/api/{src,test}/**/*.ts'
+      glob: '{apps/api/{src,test}/**/*.ts,apps/web/app/**/*.{ts,vue}}'
       run: pnpm turbo depcruise
 
-    - name: typecheck
-      glob: '**/*.{ts,vue}'
-      run: pnpm turbo typecheck
+    # lint-web と typecheck は並行させず、順に実行する。typecheck が実行する nuxt prepare が
+    # apps/web/.nuxt/eslint.config.mjs を書き換え、その途中で lint-web の ESLint がこのファイルを読むと、
+    # 自動 import の名前の定義が無く、ref・useHead などが no-undef として報告されるためである
+    - group:
+        parallel: false
+        jobs:
+          - name: lint-web
+            root: apps/web/
+            glob: 'apps/web/{app,shared,server}/**/*.{ts,vue}'
+            run: pnpm exec eslint {staged_files} --fix
+            stage_fixed: true
+
+          - name: typecheck
+            glob: '**/*.{ts,vue}'
+            run: pnpm turbo typecheck
+
+    # 検査しないファイルは .textlintignore に書き、textlint が無視する
+    - name: lint-text
+      glob: '**/*.md'
+      run: pnpm exec textlint {staged_files}
+
+    # adrs は pnpm install では入らないため、各自が入れておく(README のセットアップ)。入っていないとコミットが失敗する
+    - name: adr-doctor
+      glob: '{docs/adr/**,.adr-dir}'
+      run: adrs doctor --warnings-as-errors
 
 commit-msg:
   jobs:
