@@ -1,0 +1,93 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Asia/Tokyo",
+  "schedule": [
+    "before 9am every weekday"
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitScope": null,
+  "branchPrefix": "chore/renovate-",
+  "branchNameStrict": true,
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "dependencyDashboardApproval": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "dependencyDashboardApproval": false,
+    "automerge": true,
+    "automergeType": "pr",
+    "platformAutomerge": true,
+    "schedule": [
+      "before 9am on the first day of the month"
+    ]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "minimumReleaseAge": null,
+    "schedule": [
+      "at any time"
+    ],
+    "labels": [
+      "security"
+    ],
+    "dependencyDashboardApproval": false
+  },
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "*"
+      ],
+      "semanticCommitType": "chore"
+    },
+    {
+      "matchUpdateTypes": [
+        "pin",
+        "pinDigest"
+      ],
+      "minimumReleaseAge": null
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "matchCurrentVersion": "!/^~?0\\./",
+      "groupName": "non-major",
+      "dependencyDashboardApproval": false,
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "major-update"
+      ]
+    },
+    {
+      "matchDepNames": [
+        "node"
+      ],
+      "matchDatasources": [
+        "node-version",
+        "docker"
+      ],
+      "groupName": "Node.js"
+    },
+    {
+      "matchPackageNames": [
+        "vue-tsc"
+      ],
+      "allowedVersions": "<3.3.14"
+    }
+  ]
+}

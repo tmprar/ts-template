@@ -1,0 +1,39 @@
+{
+  "rules": {
+    "preset-ja-technical-writing": {
+      "sentence-length": {
+        "max": 200
+      },
+      "max-ten": {
+        "max": 4
+      },
+      "no-mix-dearu-desumasu": {
+        "preferInHeader": "",
+        "preferInBody": "である",
+        "preferInList": "である",
+        "strict": false
+      },
+      "no-doubled-joshi": {
+        "allow": [
+          "も",
+          "や",
+          "か",
+          "に",
+          "にも"
+        ]
+      }
+    },
+    "prh": {
+      "rulePaths": [
+        "./prh.yml"
+      ]
+    }
+  },
+  "filters": {
+    "allowlist": {
+      "allow": [
+        "/「[^」]*」/"
+      ]
+    }
+  }
+}

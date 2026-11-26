@@ -23,10 +23,10 @@ import { AppConfigService } from '#app/platform/config/index.js'
 import { MailService } from '#app/platform/mail/index.js'
 
 /**
-todoを完了にできなかった理由
-*/
-export type CompleteTodoError
-  = | {
+ * todoを完了にできなかった理由
+ */
+export type CompleteTodoError =
+  | {
     todoId: string
     type: 'AlreadyCompleted'
   }
@@ -36,24 +36,42 @@ export type CompleteTodoError
   }
 
 /**
-todoを削除できなかった理由
-*/
+ * todoを削除できなかった理由
+ */
 export type DeleteTodoError = {
   todoId: string
   type: 'TodoNotFound'
 }
 
 /**
-todoの完了を知らせられなかった理由。`cause` は翻訳前の原因で、ログに出すためだけに運ぶ
-*/
+ * 完了の通知の結果。通知までにtodoが削除されたときと、宛先が未設定のときはnull
+ */
+export type NotifiedCompletedTodoDto = null | {
+  mail: SentMailDto
+}
+
+/**
+ * todoの完了を知らせられなかった理由。`cause` は翻訳前の原因で、ログに出すためだけに運ぶ
+ */
 export type NotifyCompletedTodoError = {
-  cause?: unknown
+  cause: unknown
   type: 'NoticeUnavailable'
 }
 
 /**
-todo
-*/
+ * 送信の設定が無い環境ではメールを送らず、statusがskippedになる。
+ * statusだけにせず、メールの内容(宛先・件名・本文)を持たせる。送らなかった場合に、呼び出し側が文面をログに出力するため
+ */
+export type SentMailDto = {
+  body: string
+  status: 'sent' | 'skipped'
+  subject: string
+  to: string
+}
+
+/**
+ * todo
+ */
 export type TodoDto = {
   completedAt: Date | null
   createdAt: Date
@@ -180,25 +198,36 @@ export class TodoUsecase {
    */
   public async notifyCompletedTodo(
     input: { todoId: string },
-  ): Promise<Result<undefined, NotifyCompletedTodoError>> {
+  ): Promise<Result<NotifiedCompletedTodoDto, NotifyCompletedTodoError>> {
     const todo = await this.repository.findTodo(input.todoId)
 
     if (!todo) {
-      return ok(undefined)
+      return ok(null)
     }
 
     const to = this.config.get('TODO_NOTICE_MAIL_TO', { infer: true })
 
     if (to === undefined) {
-      return ok(undefined)
+      return ok(null)
     }
 
-    const sent = await this.mail.send(to, buildCompletedTodoMail(todo))
+    const mail = buildCompletedTodoMail(todo)
+    const sent = await this.mail.send(to, mail)
 
-    // 送信基盤の失敗を、このusecaseの失敗の型へ写して返す(原因は `cause` で運ぶ)
-    return sent.mapErr((failure): NotifyCompletedTodoError => ({
-      cause: failure.cause,
-      type: 'NoticeUnavailable',
-    }))
+    if (sent.isErr()) {
+      return err({
+        cause: sent.error,
+        type: 'NoticeUnavailable',
+      })
+    }
+
+    return ok({
+      mail: {
+        body: mail.body,
+        status: sent.value,
+        subject: mail.subject,
+        to,
+      },
+    })
   }
 }

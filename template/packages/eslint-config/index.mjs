@@ -1,6 +1,7 @@
 import eslint from '@eslint/js'
 import stylistic from '@stylistic/eslint-plugin'
 import importNewlines from 'eslint-plugin-import-newlines'
+import jsdoc from 'eslint-plugin-jsdoc'
 import perfectionist from 'eslint-plugin-perfectionist'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import tseslint from 'typescript-eslint'
@@ -15,17 +16,50 @@ const recommended = [
     },
   },
   {
+    plugins: {
+      jsdoc,
+    },
+    rules: {
+      ['jsdoc/check-alignment']: 'error',
+      ['jsdoc/require-asterisk-prefix']: 'error',
+      ['jsdoc/require-jsdoc']: [
+        'error',
+        {
+          // コンストラクタは対象にしない。引数を受け取ってインスタンスを作るという動作は、クラスの名前と引数の型から読める
+          checkConstructors: false,
+          /*
+            アロー関数と関数式は、require ではなく contexts で、変数に代入したものだけを対象にする。
+            require の ArrowFunctionExpression・FunctionExpression を true にすると、オブジェクトのプロパティに書いた
+            コールバック(useMutation の onSuccess、FullCalendar の dateClick)も対象になる。
+            コールバックとして渡す無名関数は、規約で JSDoc の対象外にしている
+          */
+          contexts: [
+            'TSMethodSignature',
+            'VariableDeclarator > ArrowFunctionExpression',
+            'VariableDeclarator > FunctionExpression',
+          ],
+          // 不足を検出したときに空の JSDoc を挿入させない。lint は --fix 付きで実行するため、挿入させると空の JSDoc が付いて検査を通る
+          enableFixer: false,
+          require: {
+            ArrowFunctionExpression: false,
+            FunctionDeclaration: true,
+            FunctionExpression: false,
+            MethodDefinition: true,
+          },
+        },
+      ],
+    },
+  },
+  {
     rules: {
       ['array-callback-return']: 'error',
       ['block-scoped-var']: 'error',
-      // ['class-methods-use-this']: 'error',
       ['curly']: ['error', 'multi-line', 'consistent'],
       ['default-case']: 'error',
       ['default-case-last']: 'error',
       ['default-param-last']: 'error',
       ['func-style']: ['error', 'declaration', { allowArrowFunctions: true }],
       ['guard-for-in']: 'error',
-      // ['no-await-in-loop']: 'error',
       ['no-caller']: 'error',
       ['no-console']: ['error', { allow: ['warn', 'error'] }],
       ['no-div-regex']: 'error',
@@ -105,7 +139,7 @@ const recommended = [
       ['prefer-spread']: 'error',
       ['prefer-template']: 'error',
       ['radix']: 'error',
-      // アロー関数を定義するスコープを内部に定義したい場合もあるので無効化
+      // アロー関数を、外側のスコープへ移さずに関数の内部で定義したい場合もあるので、無効にする
       ['unicorn/consistent-function-scoping']: 'off',
       ['unicorn/filename-case']: [
         'error',
@@ -119,34 +153,42 @@ const recommended = [
           multipleFileExtensions: false,
         },
       ],
-      // arrayメソッド以外の場合でも引っかかるため無効化
       /*
-        propsはVueの用語であり略語ではない。propertiesへ直されると
-        vue/require-macro-variable-nameがpropsを要求するため衝突する
+        propsはVueの用語であり略語ではない。このルールがpropsをpropertiesへ修正すると、
+        vue/require-macro-variable-nameがpropsという名前を要求するため衝突する
       */
       ['unicorn/name-replacements']: [
         'error',
         { replacements: { props: false } },
       ],
+      // 配列ではないオブジェクトの、配列のメソッドと同じ名前のメソッド(map など)の呼び出しも誤って検出するため、無効にする
       ['unicorn/no-array-callback-reference']: 'off',
       ['unicorn/no-array-method-this-argument']: 'off',
       ['unicorn/no-array-reduce']: 'off',
       /*
-        名前を付けるだけの変数が増えてしまうなど、意味が薄い。
-        機械的に変更する点ではないため、無効化
+        このルールに従うと、awaitの結果に名前を付けるためだけの変数が増えるなど、利点が小さい。
+        一律に書き換えるべき箇所ではないため、無効にする
       */
       ['unicorn/no-await-expression-member']: 'off',
+      // JSDoc は各行を * で始める形にそろえるため、逆の形を求めるこのルールを無効にする
+      ['unicorn/no-asterisk-prefix-in-documentation-comments']: 'off',
       ['unicorn/no-null']: 'off',
+      ['unicorn/no-unnecessary-parameters']: 'off',
       /*
-        () => Promise.resolve(x) をasyncへ直すが、待つものが無いasyncは
-        @typescript-eslint/require-awaitが咎めるため衝突する。
-        こちらは様式のみで、require-awaitはawaitのし忘れという実際の誤りを
-        捕まえるため、様式側を降ろす
+        このルールは () => Promise.resolve(x) をasync関数へ修正するが、awaitを含まないasync関数は
+        @typescript-eslint/require-awaitがエラーにするため、2つのルールが衝突する。
+        このルールは書き方を統一するだけで、require-awaitはawaitの書き忘れという実際の誤りを
+        検出するため、このルールのほうを無効にする
       */
       ['unicorn/no-useless-promise-resolve-reject']: 'off',
       ['unicorn/no-process-exit']: 'off',
       ['unicorn/numeric-separators-style']: 'off',
       ['unicorn/prefer-top-level-await']: 'off',
+      /*
+        このルールは、早期 return の if と後続の return も三項演算子の 1 文にまとめさせる。
+        条件の多いガード節が 1 つの式に詰め込まれて読みにくくなるため、無効にする
+      */
+      ['unicorn/prefer-ternary']: 'off',
       ['unicorn/prevent-abbreviations']: 'off',
       ['yoda']: 'error',
     },
@@ -166,7 +208,6 @@ const recommended = [
   }),
   {
     rules: {
-      ['@stylistic/array-bracket-spacing']: ['error', 'never'],
       ['@stylistic/arrow-spacing']: [
         'error',
         {
@@ -194,58 +235,29 @@ const recommended = [
         },
       ],
       ['@stylistic/lines-around-comment']: 'off',
+      ['@stylistic/list-style']: [
+        'error',
+        {
+          overrides: {
+            ['{}']: { singleLine: { spacing: 'always' } },
+            ['ExportNamedDeclaration']: { singleLine: { maxItems: 1 } },
+            ['ImportDeclaration']: { singleLine: { maxItems: 1 } },
+            ['ObjectExpression']: { singleLine: { maxItems: 1 } },
+            ['TSInterfaceBody']: { singleLine: { maxItems: 1 } },
+            ['TSTypeLiteral']: { singleLine: { maxItems: 1 } },
+          },
+          singleLine: { spacing: 'never' },
+        },
+      ],
       ['@stylistic/no-extra-parens']: 'error',
       ['@stylistic/no-extra-semi']: 'error',
       ['@stylistic/no-floating-decimal']: 'error',
       ['@stylistic/no-multi-spaces']: 'error',
-      // "@stylistic/jsx-quotes": ["error", "prefer-double"],
       ['@stylistic/no-multiple-empty-lines']: [
         'error',
         {
           max: 1,
           ['maxEOF']: 1,
-        },
-      ],
-      ['@stylistic/object-curly-newline']: [
-        'error',
-        {
-          ['ExportDeclaration']: {
-            consistent: true,
-            minProperties: 2,
-            multiline: true,
-          },
-          // ['ObjectPattern']: {
-          //   minProperties: 2,
-          //   multiline: true,
-          //   consistent: true,
-          // },
-          ['ImportDeclaration']: {
-            consistent: true,
-            minProperties: 2,
-            multiline: true,
-          },
-          ['ObjectExpression']: {
-            consistent: true,
-            minProperties: 2,
-            multiline: true,
-          },
-          ['TSInterfaceBody']: {
-            consistent: true,
-            minProperties: 2,
-            multiline: true,
-          },
-          ['TSTypeLiteral']: {
-            consistent: true,
-            minProperties: 2,
-            multiline: true,
-          },
-        },
-      ],
-      ['@stylistic/object-curly-spacing']: ['error', 'always'],
-      ['@stylistic/object-property-newline']: [
-        'error',
-        {
-          allowAllPropertiesOnSameLine: false,
         },
       ],
       ['@stylistic/operator-linebreak']: ['error', 'before'],
@@ -275,16 +287,6 @@ const recommended = [
           blankLine: 'any',
           next: '*',
           prev: ['case', 'default'],
-        },
-        {
-          blankLine: 'always',
-          next: '*',
-          prev: 'import',
-        },
-        {
-          blankLine: 'any',
-          next: 'import',
-          prev: 'import',
         },
       ],
       ['@stylistic/quotes']: [

@@ -1,0 +1,4 @@
+# docs/design は見た目の正とするデザインカンプ、.claude/skills は悪い例をわざと書いたスキルなので、検査しない。
+# ディレクトリだけを書くと一致しないので、配下を ** で指定する
+docs/design/**
+.claude/skills/**

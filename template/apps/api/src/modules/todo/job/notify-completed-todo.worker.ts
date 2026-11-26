@@ -1,6 +1,7 @@
 import type { OnModuleInit } from '@nestjs/common'
 
 import { Injectable } from '@nestjs/common'
+import { PinoLogger } from 'nestjs-pino'
 
 import type { JobRetryPolicy } from '#app/platform/job/index.js'
 
@@ -12,9 +13,9 @@ import { TodoUsecase } from '#app/modules/todo/todo.usecase.js'
 import { JobQueueService } from '#app/platform/job/index.js'
 
 /**
-通知のリトライ方針。最大3回で打ち切り、最終失敗はログに残すだけにする。
-完了そのものには影響させない
-*/
+ * 通知のリトライ方針。最大3回で打ち切り、最終失敗はログに残すだけにする。
+ * 完了そのものには影響させない
+ */
 const NOTIFY_COMPLETED_TODO_RETRY: JobRetryPolicy = {
   retryBackoff: true,
   retryDelay: 30,
@@ -32,9 +33,15 @@ const NOTIFY_COMPLETED_TODO_RETRY: JobRetryPolicy = {
 export class NotifyCompletedTodoWorker implements OnModuleInit {
   constructor(
     private readonly jobQueue: JobQueueService,
+    private readonly logger: PinoLogger,
     private readonly usecase: TodoUsecase,
-  ) {}
+  ) {
+    this.logger.setContext(NotifyCompletedTodoWorker.name)
+  }
 
+  /**
+   * todo の完了の通知のジョブの処理を、ジョブキューに登録する
+   */
   public async onModuleInit(): Promise<void> {
     await this.jobQueue.register<NotifyCompletedTodoJobData>(
       NOTIFY_COMPLETED_TODO_QUEUE,
@@ -54,7 +61,20 @@ export class NotifyCompletedTodoWorker implements OnModuleInit {
     if (notified.isErr()) {
       throw new Error(
         `todoの完了を通知できませんでした: ${notified.error.type}`,
-        { cause: notified.error.cause ?? notified.error },
+        { cause: notified.error.cause },
+      )
+    }
+
+    // 開発では送信の設定を置かないので、送らなかったメールの文面をログに出して確かめられるようにする
+    if (notified.value?.mail.status === 'skipped') {
+      this.logger.info(
+        {
+          body: notified.value.mail.body,
+          event: 'mail_send_skipped',
+          subject: notified.value.mail.subject,
+          to: notified.value.mail.to,
+        },
+        '送信の設定が無いためメールを送らずログに出した',
       )
     }
   }

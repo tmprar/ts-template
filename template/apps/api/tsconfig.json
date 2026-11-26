@@ -7,5 +7,6 @@
   },
   // 生成物は型検査の対象にしない。coverage の HTML レポートには JS が付き、
   // allowJs のため対象に入る(test:cov と同時に走ると、書き換え中のファイルを読んで落ちる)
-  "exclude": ["node_modules", "dist", "coverage", ".out"]
+  // .stryker-tmp は Stryker がソースを複製する作業ディレクトリで、実行が途中で止まると残る
+  "exclude": ["node_modules", "dist", "coverage", ".out", ".stryker-tmp"]
 }

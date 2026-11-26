@@ -1,0 +1,10 @@
+# 日本語の点検(prose-review.sh)の基準になるファイル。1 行に 1 つ、git の pathspec のパターンで書く。
+# ここに並べたファイルを変えると、前に点検に通った差分も、新しい基準で点検し直す
+CLAUDE.md
+.claude/skills/japanese-prose/SKILL.md
+.textlintrc.json
+.textlintignore
+prh.yml
+.claude/hooks/prose-review.sh
+.claude/hooks/prose-review.rules
+.claude/hooks/lib/review.sh

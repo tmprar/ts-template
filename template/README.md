@@ -19,10 +19,25 @@ Node.js(バージョンは `package.json` の `devEngines`)、pnpm、Docker が�
 
 ```bash
 pnpm install
-cp .env.example .env
 pnpm db migrate      # DB コンテナを立ち上げ、テーブルを作る
 pnpm dev             # 開発に必要なコンテナを立ち上げた後、開発サーバーを立ち上げる
 ```
+
+ADR(`docs/adr/`)を作成・変更するには、[adrs](https://github.com/joshrotenberg/adrs) の CLI をインストールしておく。入っていないと、ADR を含むコミットで lefthook の検査が失敗する。
+
+Claude Code で作業するときは、`jq` と Claude Code の CLI(`claude`)をインストールしておく。`.claude/settings.json` のフックが、作業を終えるときに変えた Markdown の文章を点検し、`git push` の前に `docs/review/` の観点でブランチの差分をレビューする。
+
+PR を Claude Code でレビューさせるには(`.github/workflows/claude-code-review.yml`)、リポジトリの secrets に `CLAUDE_CODE_OAUTH_TOKEN`(`claude setup-token` で発行する)を設定する。PR やコメントで `@claude` と書くと、`.github/workflows/claude.yml` が応答する。
+
+依存は、`.npmrc` で指定した [Takumi Guard](https://flatt.tech/takumi/features/guard) のレジストリ(npm の公開レジストリへの代理で、悪意のあるパッケージを止める)から取得する。CI は GitHub の OIDC トークンで Takumi Guard に Bot として認証するので、Takumi Guard で Bot を登録し、その ID をリポジトリの variables に `TAKUMI_GUARD_BOT_ID` として設定する。
+
+ルートの `.env` は [dotenvx](https://dotenvx.com/) で値を暗号化してコミットしている。復号の鍵 `.env.keys` を既存の開発者から安全な経路で受け取り、ルートに置く。`.env.keys` はコミットしない。値の追加と変更は `pnpm exec dotenvx set <名前> <値>` で行う(暗号化した状態で書き込まれる)。
+
+開発者ごとに異なる値は `.env.local` に `pnpm exec dotenvx set -f .env.local <名前> <値>` で書く。`.env.local` はコミットせず、同じ名前の値は `.env` より優先される。
+
+<!-- template:start -->
+テンプレート(`template/`)の中で開発するときは、`.env` をコミットしない(`.gitignore` で無視している)。`cp .env.example .env` で作り、暗号化はしない。
+<!-- template:end -->
 
 `pnpm dev` を実行すると、次の URL で確認できる。
 
@@ -54,10 +69,13 @@ pnpm build             # ビルド
 pnpm lint              # ESLint
 pnpm typecheck         # 型検査
 pnpm test              # ユニットテスト(vitest)
-pnpm test:cov          # ユニットテストとカバレッジ(CI はこちらを実行し、PR にコメントする)
+pnpm test:cov          # 単体と結合を合わせて実行し、カバレッジを合算する(CI はこちらを実行し、PR にコメントする)
 pnpm test:integration  # 結合テスト(api は testcontainers の PostgreSQL、web は Nuxt 環境のコンポーネントと composable)
+pnpm test:mutation     # ミューテーションテスト(Stryker。api の domain と shared だけ。レポートは apps/api/reports/mutation/)
 pnpm depcruise         # 循環 import の検出
-pnpm dev               # 開発サーバー(watch)。DB コンテナも起動し、.env を注入する
+pnpm lint:text         # 日本語の文章の検査(textlint)
+pnpm dev               # 開発サーバー(watch)。DB コンテナも起動し、.env.local・.env を注入する
+pnpm compose           # Docker Compose(.env.local・.env を復号して注入する。例: pnpm compose ps / pnpm compose down)
 pnpm db                # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 ```
 
@@ -67,7 +85,7 @@ pnpm db                # drizzle-kit(例: pnpm db generate / pnpm db migrate)
 pnpm --filter @myapp/api dev
 ```
 
-`--filter` で直接実行すると、ルートの `.env` の注入も DB コンテナの起動も行われない。通常はルートの `pnpm dev` を使う。
+`--filter` で直接実行すると、ルートの `.env.local`・`.env` の注入も DB コンテナの起動も行われない。通常はルートの `pnpm dev` を使う。API は必須の環境変数が無いと起動時の検証で止まるので、`--filter` で起動するときは環境変数を自分で渡す。
 
 ## 最初にやること
 
@@ -100,6 +118,8 @@ pnpm --filter @myapp/api dev
 | 用途                                          | 場所                             |
 | --------------------------------------------- | -------------------------------- |
 | AI エージェント向けの指示(規約と作業の進め方) | `CLAUDE.md` / `docs/workflow.md` |
-| 要件定義(要件 ID と実装状況)                  | `docs/requirements.md`           |
-| 判断の記録・要確認事項                        | `docs/decisions.md`              |
+| 要件定義(要件 ID)                             | `docs/requirements.md`           |
+| 判断の記録・要確認事項(ADR。adrs で管理する)  | `docs/adr/`                      |
+| レビューの観点(Claude のレビューと手元の点検)  | `docs/review/`                   |
+| Codex などのエージェント向けの入口             | `AGENTS.md`                      |
 | システム構成設計                              | `docs/architecture.md`           |

@@ -1,7 +1,8 @@
 # 判断の記録
 
 テンプレート(このリポジトリ)の保守で決めたことと、人間に確認してほしいことを時系列で追記する。
-書式は `template/docs/workflow.md` の「docs/decisions.md の書式」に従う。作ったプロジェクトの判断は、そのプロジェクトの `docs/decisions.md` に書く。
+見出しは `## YYYY-MM-DD <主題>` にし、その下に「決定:」「理由:」「要確認:」で始まる箇条を並べる。「要確認」に書くのは、資料を読み突き合わせても決められず、人間の判断が要る点だけにする。
+作ったプロジェクトの判断は、そのプロジェクトの `docs/adr/` に ADR として記録する(`template/docs/workflow.md` の「判断の記録」)。
 
 ## 2026-10-03 テンプレートを template/ に置き、npx でリポジトリを指定して作る
 - 決定: create-vite と同じく、ルートを CLI のパッケージ、テンプレートの中身を `template/` にする。利用者は `npx github:tmprar/ts-template#release` で起動し、対話に答えると、写す・書き換える・`.env` を作る・`git init`・`pnpm install`・`pnpm lint` までを済ませる。giget による取得、`--template`、`--in-place`(GitHub の template repository として使う形)はやめる
@@ -30,3 +31,35 @@
 - 理由: Domain がテンプレートのファイルを読むことになるが、テンプレートはコードと一緒に配る固定の資産で、内容は実行中に変わらない。Domain の単体テストで件名と本文を確かめられる
 - 決定: Gateway の規約(`template/CLAUDE.md`)は残す。サンプルに実装は無くなるが、モジュールが外部サービスと直接やり取りするときの置き場所として要る
 - 決定: 本文の末尾の改行は残す(テンプレートのファイルの末尾の改行がそのまま出る)。build 関数では落とさない
+
+## 2026-11-24 作ったプロジェクトの .env を dotenvx で暗号化してコミットする
+- 決定: akitoki(#96, #97)に合わせ、`dotenv-cli` を `@dotenvx/dotenvx` に替え、ルートのスクリプトを `dotenvx run -f .env.local -f .env --` にする。Docker Compose は `pnpm compose` から復号して実行し、`compose:up`・`compose:down` はなくす
+- 決定: テンプレートに鍵は置かない。CLI が `.env.example` を `.env` に改名し、install と lint の後に `pnpm exec dotenvx encrypt` を実行して、プロジェクトごとの鍵 `.env.keys` を作る。install しないときは次にやることに `pnpm exec dotenvx encrypt` を出す
+- 決定: テンプレートの中では `.env` を `.gitignore` で無視し続ける(`# template:start` の印で囲み、作ったプロジェクトからは消す)。`.env.keys` はどちらでも無視する
+- 理由: テンプレートに暗号化した `.env` と鍵を置くと、作ったプロジェクトがすべて同じ鍵を共有する。テンプレートの中で `.env` を無視しないと、開発用の平文の `.env` がこのリポジトリの未追跡のファイルに出る
+
+## 2026-11-24 web を機能ごとのディレクトリで構成し、取得と更新を TanStack Query で書く
+- 決定: akitoki(#63, #72, #73, #74)に合わせ、サンプルの todo を `app/features/todo/` に移す。`app/domain` はなくし、純関数は機能の `utils/` と `app/utils/` に置く。境界の規則は akitoki の eslint-plugin-boundaries の設定をそのまま使う
+- 決定: 自作のコードの自動 import を止め(`components.dirs: []`・`imports.scan: false`)、使うファイルが import する。import 文が無いと、境界の規則で依存を検査できないため
+- 決定: 取得と更新は TanStack Query で書き、生成するクライアントを hey-api の axios 版と `@tanstack/vue-query` プラグインにする。更新の失敗は `Result` で返さず、`onError` でトーストを出す。web の依存から neverthrow を外し、`docs/workflow.md` の採用済みのスタックに TanStack Query と axios を加える
+- 決定: 取得し直しに失敗しても、前に取得した一覧を表示し続ける。読み込めなかった案内は、最初の取得に失敗して一覧が無いときだけ出す
+- 要確認: 確認中に、DB を止めると API のプロセスも落ちると分かった。`pg.Pool` に `error` の listener が無く、DB が接続を切ったときの `error` イベントが未処理の例外になる。akitoki も同じ作りで、今回の取り込みの範囲外なので直していない
+
+## 2026-11-24 作ったプロジェクトの判断の記録を ADR にし、E2E と infra の取り込みを見送る
+- 決定: 開発者の指示により、作ったプロジェクトの判断の記録を `docs/decisions.md` から `docs/adr/` の ADR(adrs で管理)に移す。規則は akitoki の `docs/workflow.md` の「判断の記録」「未確認の判断の確認」を写し、lefthook と CI(`lint-adr`)で `adrs doctor --warnings-as-errors` を実行する。ADR 1 と、ADR を使う判断の ADR 2 をテンプレートに置く
+- 決定: このリポジトリ(テンプレートの保守)の判断は、引き続きルートの `docs/decisions.md` に書く。書式はこのファイルの冒頭に書いた
+- 決定: 開発者の指示により、akitoki のブラウザの E2E(`e2e`・`@e2e-dev/web` による AI エージェント型)は取り込まない
+- 決定: 開発者の指示により、infra の PR の cdk diff・deploy.yml・デプロイ用のロールの制限は取り込まない。テンプレートの `AppStack` が空で、akitoki の仕組みは akitoki の構成(EC2・CloudFront・ECR)を前提にしているため
+- 決定: akitoki の `pnpm-workspace.yaml` の `minimumReleaseAge` は取り込まない。いまの lockfile の 33 件(公開から 3 日経っていない TanStack Query・textlint など)が違反し、install が失敗するため
+
+## 2026-11-25 依存の版を akitoki にそろえ、vue-tsc を 3.3.13 に固定する
+- 決定: 開発者の指示により、両方にある依存の指定を akitoki の版にそろえる。Node は 26.13.1(`devEngines` と API の Dockerfile)、pnpm は 12.21.0 にする。CLI 自身の `engines` は変えない(作ったプロジェクトの Node は `devEngines` で pnpm が取得するため)
+- 決定: `@tanstack/vue-query` と `@tanstack/eslint-plugin-query` は、akitoki の `~5.108.0` に下げず、template の `~5.108.3` のままにする
+- 決定: akitoki(#177)と同じく `vue-tsc` を `3.3.13` に固定し、Renovate の `allowedVersions` を `<3.3.14` にする。3.3.14 には、ref でない変数にもテンプレートの中で `.value` を足して型付けする不具合(vuejs/language-tools#6364)がある。作ったプロジェクトでも、同じ書き方をすると型検査に失敗する。直った版が出たら、規則を消して `~` に戻す
+- 決定: web の `Result` 型、API の `UrlBuilder`、`useMutationProgress` と `withSetup` は取り込まない。akitoki でも、特定の機能(調整リンクのフォーム、Google Calendar の gateway、設定画面の保存の表示)からだけ使っており、template に使う場所が無い
+
+## 2026-11-25 更新のあとの取得し直しを、成功したときだけにする
+- 決定: 開発者の指示により、`meta.invalidates` の取得し直しを MutationCache の `onSettled` から `onSuccess` に移す。TanStack Query の公式ガイド(Invalidations from Mutations)と、`meta.invalidates` の形を紹介した TkDodo の記事・GitHub の議論(#7324)は、どれも `onSuccess` で取得し直している。公式の楽観的更新のガイドが `onSettled` を使うのは、失敗したときに書き換えた画面を戻すためで、楽観的更新をしない template には当てはまらない
+- 理由: 失敗したときも取得し直して待つと、APIの不具合や通信の失敗では取得し直しも失敗し、その再試行(最大 3 回、1・2・4 秒の間隔)が終わるまで、失敗のトーストが出たあとも操作のボタンが押せなかった
+- 決定: ほかの画面での変更で一覧が古かったことを示すエラー(`TODO_ALREADY_COMPLETED`・`TODO_NOT_FOUND`)のときだけ、そのエラーを扱う `onError` で取得し直す
+- 要確認: akitoki の `plugins/vue-query.ts` も `onSettled` で取得し直しており、同じことが起きる。akitoki は直していない

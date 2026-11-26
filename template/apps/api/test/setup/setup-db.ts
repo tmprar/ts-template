@@ -12,13 +12,15 @@ const MIGRATIONS_FOLDER = fileURLToPath(
   new URL('../../drizzle', import.meta.url),
 )
 
-// narrowingを関数内(databaseUrl)まで効かせるため、||で受けてstringに確定させる
 const BASE_URL
   = process.env['TEST_DATABASE_BASE_URL']
     || assert.fail(
       'TEST_DATABASE_BASE_URLが未設定です。global-setup.ts経由で実行してください',
     )
 
+/**
+ * コンテナの接続先の URL のうち、データベース名だけを database に差し替えた URL を返す
+ */
 function databaseUrl(database: string): string {
   const url = new URL(BASE_URL)
 
@@ -27,7 +29,10 @@ function databaseUrl(database: string): string {
   return url.href
 }
 
-// worker専用の空DBを作り直す。FORCE指定で残存接続があっても切断してDROPする
+/**
+ * name のデータベースがあれば削除し、同じ名前の空のデータベースを作る。
+ * 前の実行の接続が残っていても削除できるよう、DROP に FORCE を付ける
+ */
 async function resetDb(name: string): Promise<void> {
   const admin = new pg.Client({ connectionString: databaseUrl('postgres') })
 
@@ -44,8 +49,6 @@ async function resetDb(name: string): Promise<void> {
 const workerDb = `test_worker_${process.env['VITEST_POOL_ID'] ?? '0'}`
 
 process.env['DATABASE_URL'] = databaseUrl(workerDb)
-// todoの完了を知らせる宛先(サンプル)。値は test/support/mails.ts の NOTICE_MAIL_TO と揃える
-process.env['TODO_NOTICE_MAIL_TO'] = 'todo-owner@example.com'
 
 await resetDb(workerDb)
 
@@ -54,8 +57,7 @@ const client = new pg.Client({ connectionString: databaseUrl(workerDb) })
 await client.connect()
 await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER })
 
-// 各テストをまっさらなDBで開始する。drizzleのマイグレーション管理テーブルは
-// publicではなくdrizzleスキーマにあるため対象外
+// マイグレーション管理テーブルを除外する条件は書かない。drizzleのマイグレーション管理テーブルはpublicではなくdrizzleスキーマにあるため、このTRUNCATEの対象にならない
 beforeEach(async () => {
   const result = await client.query<{ tablename: string }>(
     'SELECT tablename FROM pg_tables WHERE schemaname = \'public\'',

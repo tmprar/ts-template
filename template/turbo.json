@@ -7,6 +7,9 @@
       "outputs": ["dist/**"]
     },
     "depcruise": {},
+    "@myapp/web#depcruise": {
+      "dependsOn": ["^build"]
+    },
     "lint": {},
     "typecheck": {
       "dependsOn": ["^build"]
@@ -21,12 +24,16 @@
     "test:integration": {
       "dependsOn": ["^build"]
     },
+    "test:mutation": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "@myapp/api#generate:openapi": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
       "outputs": [".out/**"]
     },
     "@myapp/web#nuxt:prepare": {

@@ -9,7 +9,7 @@ import { HealthController } from '#app/platform/health/health.controller.js'
   controllers: [HealthController],
   imports: [
     DrizzleModule,
-    // 失敗時に terminus が出すログは 1 行の JSON にする(構造化ログに揃える)
+    // 確認の失敗時に terminus が出すログを、ほかのログ(構造化ログ)と同じ 1 行の JSON にする
     TerminusModule.forRoot({ errorLogStyle: 'json' }),
   ],
   providers: [DatabaseHealthIndicator],

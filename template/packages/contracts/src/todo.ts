@@ -1,5 +1,8 @@
 import * as v from 'valibot'
 
+/**
+ * ISO 8601 の日時の文字列で、OpenAPI に `description` の説明を付けたスキーマを返す
+ */
 const isoTimestamp = (description: string) =>
   v.pipe(v.string(), v.isoTimestamp(), v.description(description))
 
@@ -44,8 +47,8 @@ export const todoListResponseSchema = v.object({
 export type TodoListResponse = v.InferOutput<typeof todoListResponseSchema>
 
 /**
-件名に指定できる文字数の上限
-*/
+ * 件名に指定できる文字数の上限
+ */
 export const TODO_TITLE_MAX_LENGTH = 100
 
 /*

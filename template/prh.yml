@@ -1,0 +1,5 @@
+version: 1
+rules:
+  - expected: デプロイ
+    pattern: 配備
+    prh: 一般的な「デプロイ」にそろえる

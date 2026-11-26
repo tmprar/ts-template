@@ -11,5 +11,7 @@ export default {
     'subject-full-stop': [2, 'never', '。'],
     // 日本語の要約に要件 ID が付く。config-conventional の既定と同じ 100 を明示して固定する
     'header-max-length': [2, 'always', 100],
+    // 本文は日本語の文を途中で改行せずに書けるよう、config-conventional の既定の 1 行 100 文字の上限を適用しない
+    'body-max-line-length': [0],
   },
 }
